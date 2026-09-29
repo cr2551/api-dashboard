@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:sla_monitor_server/sla_monitor_server.dart';
@@ -6,13 +7,19 @@ import 'package:sla_monitor_server/sla_monitor_server.dart';
 /// Runs the Stripe probe on an interval, stores results in SQLite, checks the
 /// SLA and prints alerts.
 ///
-/// Env: STRIPE_API_KEY (required, test-mode key), PROBE_INTERVAL_SECONDS
-/// (default 60), DB_PATH (default probes.db).
+/// Key: STRIPE_API_KEY env var, else STRIPE_SECRET_KEY from the JSON file at
+/// CONFIG_PATH (default ../config.json, git-ignored). Use a test-mode key.
+/// Env: PROBE_INTERVAL_SECONDS (default 60), DB_PATH (default probes.db).
 Future<void> main() async {
   final env = Platform.environment;
-  final apiKey = env['STRIPE_API_KEY'];
+  final apiKey =
+      env['STRIPE_API_KEY'] ??
+      _readConfigKey(env['CONFIG_PATH'] ?? '../config.json');
   if (apiKey == null || apiKey.isEmpty) {
-    stderr.writeln('STRIPE_API_KEY is not set (use a test-mode key).');
+    stderr.writeln(
+      'No Stripe key: set STRIPE_API_KEY or STRIPE_SECRET_KEY '
+      'in config.json (use a test-mode key).',
+    );
     exit(64);
   }
   final interval = Duration(
@@ -43,4 +50,11 @@ Future<void> main() async {
     store.close();
     exit(0);
   });
+}
+
+String? _readConfigKey(String path) {
+  final file = File(path);
+  if (!file.existsSync()) return null;
+  final json = jsonDecode(file.readAsStringSync());
+  return json is Map ? json['STRIPE_SECRET_KEY'] as String? : null;
 }

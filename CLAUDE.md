@@ -13,7 +13,7 @@ A SaaS Status & SLA Breach Monitor. It actively probes external APIs from our ow
   - **SLA detection:** evaluating results against configured SLA thresholds.
   - **Alerting:** notifying when an SLA is breached.
 
-  The backend stack is not yet decided.
+  The backend is written in Dart (`server/`), stores probe results in SQLite, and starts with a Stripe probe (`GET /v1/balance` with a test-mode key). Run it with `STRIPE_API_KEY=sk_test_... dart run bin/monitor.dart` from `server/` (optional: `PROBE_INTERVAL_SECONDS`, `DB_PATH`).
 
 ## Quality
 
@@ -31,4 +31,4 @@ A SaaS Status & SLA Breach Monitor. It actively probes external APIs from our ow
 - Every change should keep CI green (analyze + tests + build).
 - Add unit tests for new logic, especially SLA detection and latency/uptime calculations.
 - Keep probing/SLA logic out of widgets so it stays unit-testable.
-
+- Backend commands run from `server/`: `dart pub get`, `dart analyze`, `dart test`.

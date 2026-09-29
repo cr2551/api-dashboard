@@ -1,0 +1,11 @@
+﻿name: sla_monitor_server
+description: Backend for the SaaS Status & SLA Breach Monitor (probing, storage, SLA detection, alerting).
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.13.2
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.6

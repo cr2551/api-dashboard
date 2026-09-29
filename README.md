@@ -1,6 +1,7 @@
-# basic_app
+# API Dashboard
 
-A new Flutter project.
+App built in flutter designed to monitor your APIs.
+
 
 ## Getting Started
 

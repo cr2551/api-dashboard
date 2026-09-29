@@ -1,12 +1,12 @@
-﻿import 'package:sla_monitor_server/sla_monitor_server.dart';
+import 'package:sla_monitor_server/sla_monitor_server.dart';
 import 'package:test/test.dart';
 
 ProbeResult probe(int ms, {bool ok = true}) => ProbeResult(
-      provider: 'stripe',
-      timestamp: DateTime.utc(2026, 1, 1),
-      latency: Duration(milliseconds: ms),
-      success: ok,
-    );
+  provider: 'stripe',
+  timestamp: DateTime.utc(2026, 1, 1),
+  latency: Duration(milliseconds: ms),
+  success: ok,
+);
 
 void main() {
   const policy = SlaPolicy(
@@ -46,17 +46,14 @@ void main() {
       probe(1, ok: false),
       probe(1, ok: false),
     ];
-    expect(
-      detectBreaches(policy, r).map((b) => b.type),
-      [SlaBreachType.uptime, SlaBreachType.latency],
-    );
+    expect(detectBreaches(policy, r).map((b) => b.type), [
+      SlaBreachType.uptime,
+      SlaBreachType.latency,
+    ]);
   });
 
   test('boundary values are not breaches', () {
-    final r = [
-      for (var i = 0; i < 9; i++) probe(500),
-      probe(1, ok: false),
-    ];
+    final r = [for (var i = 0; i < 9; i++) probe(500), probe(1, ok: false)];
     expect(detectBreaches(policy, r), isEmpty);
   });
 

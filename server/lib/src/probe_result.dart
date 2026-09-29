@@ -1,4 +1,4 @@
-﻿/// Outcome of a single probe against an external API.
+/// Outcome of a single probe against an external API.
 class ProbeResult {
   const ProbeResult({
     required this.provider,

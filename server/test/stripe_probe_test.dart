@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -6,19 +6,21 @@ import 'package:sla_monitor_server/sla_monitor_server.dart';
 import 'package:test/test.dart';
 
 StripeProbe probeWith(http.Client client, {Duration? timeout}) => StripeProbe(
-      apiKey: 'sk_test_123',
-      client: client,
-      now: () => DateTime.utc(2026, 1, 1),
-      timeout: timeout ?? const Duration(seconds: 10),
-    );
+  apiKey: 'sk_test_123',
+  client: client,
+  now: () => DateTime.utc(2026, 1, 1),
+  timeout: timeout ?? const Duration(seconds: 10),
+);
 
 void main() {
   test('records success with status code and sends bearer auth', () async {
     late http.Request seen;
-    final probe = probeWith(MockClient((req) async {
-      seen = req;
-      return http.Response('{}', 200);
-    }));
+    final probe = probeWith(
+      MockClient((req) async {
+        seen = req;
+        return http.Response('{}', 200);
+      }),
+    );
 
     final result = await probe.run();
 
@@ -33,8 +35,9 @@ void main() {
   });
 
   test('marks non-2xx responses as failures', () async {
-    final result =
-        await probeWith(MockClient((_) async => http.Response('', 401))).run();
+    final result = await probeWith(
+      MockClient((_) async => http.Response('', 401)),
+    ).run();
     expect(result.success, isFalse);
     expect(result.statusCode, 401);
     expect(result.error, 'HTTP 401');

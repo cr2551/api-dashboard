@@ -1,4 +1,4 @@
-﻿import 'probe_result.dart';
+import 'probe_result.dart';
 
 /// Average latency of successful probes, or null when there are none.
 Duration? averageLatency(List<ProbeResult> results) {

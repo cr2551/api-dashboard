@@ -1,4 +1,4 @@
-﻿import 'probe_result.dart';
+import 'probe_result.dart';
 import 'stats.dart';
 
 /// Thresholds a provider must meet over a rolling [window].
@@ -46,22 +46,28 @@ List<SlaBreach> detectBreaches(SlaPolicy policy, List<ProbeResult> results) {
 
   final uptime = uptimePercent(results)!;
   if (uptime < policy.minUptimePercent) {
-    breaches.add(SlaBreach(
-      provider: policy.provider,
-      type: SlaBreachType.uptime,
-      message: 'uptime ${uptime.toStringAsFixed(2)}% is below '
-          '${policy.minUptimePercent}%',
-    ));
+    breaches.add(
+      SlaBreach(
+        provider: policy.provider,
+        type: SlaBreachType.uptime,
+        message:
+            'uptime ${uptime.toStringAsFixed(2)}% is below '
+            '${policy.minUptimePercent}%',
+      ),
+    );
   }
 
   final p95 = p95Latency(results);
   if (p95 != null && p95 > policy.maxP95Latency) {
-    breaches.add(SlaBreach(
-      provider: policy.provider,
-      type: SlaBreachType.latency,
-      message: 'p95 latency ${p95.inMilliseconds}ms exceeds '
-          '${policy.maxP95Latency.inMilliseconds}ms',
-    ));
+    breaches.add(
+      SlaBreach(
+        provider: policy.provider,
+        type: SlaBreachType.latency,
+        message:
+            'p95 latency ${p95.inMilliseconds}ms exceeds '
+            '${policy.maxP95Latency.inMilliseconds}ms',
+      ),
+    );
   }
   return breaches;
 }

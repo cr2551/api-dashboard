@@ -1,4 +1,4 @@
-﻿import 'package:sla_monitor_server/sla_monitor_server.dart';
+import 'package:sla_monitor_server/sla_monitor_server.dart';
 import 'package:test/test.dart';
 
 ProbeResult result(
@@ -7,15 +7,14 @@ ProbeResult result(
   bool ok = true,
   int? status = 200,
   String? error,
-}) =>
-    ProbeResult(
-      provider: provider,
-      timestamp: at,
-      latency: const Duration(milliseconds: 123),
-      success: ok,
-      statusCode: status,
-      error: error,
-    );
+}) => ProbeResult(
+  provider: provider,
+  timestamp: at,
+  latency: const Duration(milliseconds: 123),
+  success: ok,
+  statusCode: status,
+  error: error,
+);
 
 void main() {
   late ProbeStore store;

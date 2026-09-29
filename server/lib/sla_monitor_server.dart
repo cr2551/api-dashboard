@@ -7,3 +7,4 @@ export 'src/sla.dart';
 export 'src/alerter.dart';
 export 'src/monitor.dart';
 export 'src/api.dart';
+export 'src/config.dart';

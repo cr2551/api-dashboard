@@ -1,4 +1,6 @@
-﻿# API Dashboard
+﻿# CLAUDE.md
+
+## Project
 
 A SaaS Status & SLA Breach Monitor. It actively probes external APIs from our own system (starting with payment processors like Stripe), measures latency and uptime, and alerts when a provider breaches a defined SLA threshold.
 
@@ -17,11 +19,16 @@ A SaaS Status & SLA Breach Monitor. It actively probes external APIs from our ow
 
 - **Automated builds and unit tests:** GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs `flutter pub get`, `flutter analyze`, `flutter test` and a build on every push and pull request.
 
-## Development
+## Commands
 
-```bash
-flutter pub get
-flutter run
-flutter test
-```
+- Install deps: `flutter pub get`
+- Run: `flutter run`
+- Analyze: `flutter analyze`
+- Test: `flutter test`
+
+## Conventions
+
+- Every change should keep CI green (analyze + tests + build).
+- Add unit tests for new logic, especially SLA detection and latency/uptime calculations.
+- Keep probing/SLA logic out of widgets so it stays unit-testable.
 

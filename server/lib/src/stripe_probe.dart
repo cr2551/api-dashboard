@@ -1,12 +1,13 @@
-﻿import 'package:http/http.dart' as http;
+import 'package:http/http.dart' as http;
 
+import 'probe.dart';
 import 'probe_result.dart';
 
 /// Probes Stripe by calling the authenticated, read-only `GET /v1/balance`.
 ///
 /// Use a test-mode secret key (`sk_test_...`). The HTTP client and clock are
 /// injectable so the probe can be unit tested without network access.
-class StripeProbe {
+class StripeProbe implements Probe {
   StripeProbe({
     required this.apiKey,
     http.Client? client,
@@ -14,12 +15,15 @@ class StripeProbe {
     Stopwatch Function()? stopwatch,
     this.timeout = const Duration(seconds: 10),
     Uri? endpoint,
-  })  : _client = client ?? http.Client(),
-        _now = now ?? DateTime.now,
-        _stopwatch = stopwatch ?? Stopwatch.new,
-        endpoint = endpoint ?? Uri.parse('https://api.stripe.com/v1/balance');
+  }) : _client = client ?? http.Client(),
+       _now = now ?? DateTime.now,
+       _stopwatch = stopwatch ?? Stopwatch.new,
+       endpoint = endpoint ?? Uri.parse('https://api.stripe.com/v1/balance');
 
-  static const provider = 'stripe';
+  static const providerName = 'stripe';
+
+  @override
+  String get provider => providerName;
 
   final String apiKey;
   final Duration timeout;
@@ -28,7 +32,7 @@ class StripeProbe {
   final DateTime Function() _now;
   final Stopwatch Function() _stopwatch;
 
-  /// Runs one probe. Never throws: failures are reported in the result.
+  @override
   Future<ProbeResult> run() async {
     final timestamp = _now().toUtc();
     final watch = _stopwatch()..start();

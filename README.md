@@ -46,6 +46,8 @@ flutter test
 
    Point the app at a different backend with `--dart-define=API_BASE_URL=http://host:port`.
 
+   If the backend has `API_TOKEN` set, the app shows an **Enter access token** button on the 401 error (and a key icon in the app bar to change it later). For development you can instead pass `--dart-define=API_TOKEN=<token>`. The token is kept in memory only, so the app asks again after a restart.
+
 The backend also accepts `PORT`, `PROBE_INTERVAL_SECONDS` (default 30) and `DB_PATH` (default `probes.db`).
 ## Alert channel: ntfy.sh
 
@@ -115,4 +117,4 @@ API_TOKEN=$(openssl rand -hex 32) dart run bin/serve.dart
 curl -H "Authorization: Bearer <token>" http://localhost:8080/api/status
 ```
 
-Without `API_TOKEN` the API is open and `serve.dart` logs a warning. That is only acceptable because it listens on localhost; set a token before exposing it (see [#32](https://github.com/cr2551/api-dashboard/issues/32)), and use HTTPS, because a bearer token is readable on plain HTTP. The Flutter app does not send the token yet ([#31](https://github.com/cr2551/api-dashboard/issues/31)), so with a token set it will get 401 until then.
+Without `API_TOKEN` the API is open and `serve.dart` logs a warning. That is only acceptable because it listens on localhost; set a token before exposing it (see [#32](https://github.com/cr2551/api-dashboard/issues/32)), and use HTTPS, because a bearer token is readable on plain HTTP.

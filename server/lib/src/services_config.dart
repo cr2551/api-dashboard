@@ -36,10 +36,15 @@ class ServiceConfig {
     required this.policy,
     this.endpoint,
     this.expectedStatus,
+    this.displayName,
   });
 
   final String name;
   final String type;
+
+  /// Friendly title for the dashboard (for example `GitHub`). The [name] is
+  /// still the key used in the API, alerts and logs.
+  final String? displayName;
 
   /// Required for type `http`; overrides the default for other types.
   final Uri? endpoint;
@@ -101,6 +106,7 @@ ServiceConfig _parseService(Object? json, String at) {
   final map = _object(json, at);
   _rejectUnknown(map, {
     'name',
+    'displayName',
     'type',
     'endpoint',
     'expectedStatus',
@@ -111,6 +117,16 @@ ServiceConfig _parseService(Object? json, String at) {
 
   final name = _requiredString(map, 'name', at);
   final type = _requiredString(map, 'type', at);
+  String? displayName;
+  if (map.containsKey('displayName')) {
+    displayName = _requiredString(map, 'displayName', at);
+    if (displayName.length > 40) {
+      throw ConfigException(
+        '$at.displayName',
+        'must be 40 characters or fewer',
+      );
+    }
+  }
   if (!supportedServiceTypes.contains(type)) {
     throw ConfigException(
       '$at.type',
@@ -154,6 +170,7 @@ ServiceConfig _parseService(Object? json, String at) {
 
   return ServiceConfig(
     name: name,
+    displayName: displayName,
     type: type,
     endpoint: endpoint,
     expectedStatus: expectedStatus,

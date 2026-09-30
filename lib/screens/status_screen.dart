@@ -97,6 +97,7 @@ class _StatusScreenState extends State<StatusScreen> {
         builder: (_) => ServiceDetailScreen(
           client: widget.client,
           provider: service.provider,
+          displayName: service.displayName,
         ),
       ),
     );

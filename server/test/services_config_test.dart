@@ -247,6 +247,39 @@ void main() {
     });
   });
 
+  group('displayName', () {
+    test('is optional and defaults to null', () {
+      expect(parse([service()]).single.displayName, isNull);
+    });
+
+    test('is read and trimmed', () {
+      final s = parse([
+        service({'displayName': '  GitHub '}),
+      ]).single;
+      expect(s.displayName, 'GitHub');
+      expect(s.name, 'stripe', reason: 'the key is unchanged');
+    });
+
+    test('must be a non-empty string of at most 40 characters', () {
+      for (final bad in ['', '   ', 5, null]) {
+        expectBadField({
+          'services': [
+            service({'displayName': bad}),
+          ],
+        }, 'services[0].displayName');
+      }
+      expectBadField(
+        {
+          'services': [
+            service({'displayName': 'x' * 41}),
+          ],
+        },
+        'services[0].displayName',
+        '40 characters',
+      );
+    });
+  });
+
   group('type http', () {
     Map<String, Object?> http([Map<String, Object?> extra = const {}]) =>
         service({
@@ -337,6 +370,31 @@ void main() {
               .having((e) => e.field, 'field', bad)
               .having((e) => e.message, 'message', contains('JSON')),
         ),
+      );
+    });
+
+    test('the committed services.chaos.example.json is valid', () {
+      final list = loadServicesConfig('../services.chaos.example.json');
+      expect(list.map((s) => s.name), [
+        'down-5xx',
+        'client-4xx',
+        'slow',
+        'times-out',
+        'flaky',
+        'wrong-status',
+        'no-such-host',
+        'bad-cert',
+      ]);
+      expect(list.every((s) => s.displayName != null), isTrue);
+      expect(list.every((s) => s.type == 'http'), isTrue);
+      // The timeout scenario only makes sense when the timeout is shorter
+      // than the endpoint's delay.
+      final timesOut = list.firstWhere((s) => s.name == 'times-out');
+      expect(timesOut.timeout, const Duration(seconds: 2));
+      expect(timesOut.endpoint.toString(), endsWith('/delay/5'));
+      expect(
+        list.firstWhere((s) => s.name == 'wrong-status').expectedStatus,
+        200,
       );
     });
 

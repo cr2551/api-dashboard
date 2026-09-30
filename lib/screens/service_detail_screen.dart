@@ -20,11 +20,15 @@ class ServiceDetailScreen extends StatefulWidget {
     super.key,
     required this.client,
     required this.provider,
+    this.displayName,
     this.initialMinutes = 60,
   });
 
   final ApiClient client;
   final String provider;
+
+  /// Friendly title; falls back to a capitalised [provider].
+  final String? displayName;
   final int initialMinutes;
 
   @override
@@ -97,7 +101,9 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(providerLabel(widget.provider)),
+        title: Text(
+          providerLabel(widget.provider, displayName: widget.displayName),
+        ),
         actions: [
           IconButton(
             tooltip: 'Refresh',

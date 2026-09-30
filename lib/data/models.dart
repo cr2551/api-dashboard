@@ -44,6 +44,7 @@ class ServiceStatus {
     required this.windowMinutes,
     required this.sampleCount,
     required this.breaches,
+    this.displayName,
     this.lastProbe,
     this.uptimePercent,
     this.avgLatencyMs,
@@ -52,6 +53,7 @@ class ServiceStatus {
 
   factory ServiceStatus.fromJson(Map<String, dynamic> json) => ServiceStatus(
     provider: json['provider'] as String,
+    displayName: json['displayName'] as String?,
     state: ServiceState.values.firstWhere(
       (s) => s.name == json['state'],
       orElse: () => ServiceState.unknown,
@@ -71,6 +73,9 @@ class ServiceStatus {
   );
 
   final String provider;
+
+  /// Friendly title chosen in the backend's services config, if any.
+  final String? displayName;
   final ServiceState state;
   final ProbePoint? lastProbe;
   final int windowMinutes;

@@ -80,7 +80,7 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 | Status screen showing current status per service | ✅ | [#14](https://github.com/cr2551/api-dashboard/issues/14) |
 | Uptime % and latency trend chart | ✅ | [#15](https://github.com/cr2551/api-dashboard/issues/15) |
 | Connect Flutter app to backend API | ✅ | [#11](https://github.com/cr2551/api-dashboard/issues/11), [#12](https://github.com/cr2551/api-dashboard/issues/12), [#13](https://github.com/cr2551/api-dashboard/issues/13) |
-| Basic auth if backend is exposed publicly | 🟡 | Backend bearer token (`API_TOKEN`) done: [#30](https://github.com/cr2551/api-dashboard/issues/30). App does not send it yet: [#31](https://github.com/cr2551/api-dashboard/issues/31) |
+| Basic auth if backend is exposed publicly | ✅ | Backend bearer token (`API_TOKEN`): [#30](https://github.com/cr2551/api-dashboard/issues/30). App sends it, with a token prompt on 401: [#31](https://github.com/cr2551/api-dashboard/issues/31) |
 | Deploy backend somewhere persistent | ⬜ | [#32](https://github.com/cr2551/api-dashboard/issues/32) |
 
 ## Phase 8: Documentation
@@ -97,7 +97,6 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 | Component | Issues |
 |---|---|
 | backend / coverage | [#27](https://github.com/cr2551/api-dashboard/issues/27) more API probes |
-| frontend / security | [#31](https://github.com/cr2551/api-dashboard/issues/31) send the token from the app |
 | infra | [#32](https://github.com/cr2551/api-dashboard/issues/32) deploy the backend |
 
 Tasks in the same area can touch the same files (for example anything that changes `Monitor`), so tell each other before starting.

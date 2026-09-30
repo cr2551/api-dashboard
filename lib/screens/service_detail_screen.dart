@@ -4,6 +4,7 @@ import '../data/api_client.dart';
 import '../data/models.dart';
 import '../widgets/latency_chart.dart';
 import '../widgets/service_card.dart';
+import '../widgets/token_dialog.dart';
 
 /// Time ranges offered on the detail screen.
 const historyRanges = <int, String>{
@@ -35,6 +36,8 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   ServiceHistory? _history;
   String? _error;
   bool _loading = true;
+  bool _unauthorized = false;
+  bool _tokenRejected = false;
 
   @override
   void initState() {
@@ -46,6 +49,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     setState(() {
       _loading = true;
       _error = null;
+      _unauthorized = false;
     });
     final requested = _minutes;
     try {
@@ -58,6 +62,14 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
         _history = history;
         _loading = false;
       });
+    } on UnauthorizedException catch (e) {
+      if (!mounted || requested != _minutes) return;
+      setState(() {
+        _error = e.message;
+        _unauthorized = true;
+        _tokenRejected = e.hadToken;
+        _loading = false;
+      });
     } on ApiException catch (e) {
       if (!mounted || requested != _minutes) return;
       setState(() {
@@ -65,6 +77,13 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
         _loading = false;
       });
     }
+  }
+
+  Future<void> _enterToken() async {
+    final token = await showTokenDialog(context, rejected: _tokenRejected);
+    if (token == null || !mounted) return;
+    widget.client.apiToken = token;
+    await _load();
   }
 
   void _selectRange(int minutes) {
@@ -123,9 +142,16 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(_error ?? 'Something went wrong'),
+            Text(_error ?? 'Something went wrong', textAlign: TextAlign.center),
             const SizedBox(height: 12),
-            FilledButton(onPressed: _load, child: const Text('Retry')),
+            if (_unauthorized) ...[
+              FilledButton(
+                onPressed: _enterToken,
+                child: const Text('Enter access token'),
+              ),
+              TextButton(onPressed: _load, child: const Text('Retry')),
+            ] else
+              FilledButton(onPressed: _load, child: const Text('Retry')),
           ],
         ),
       );

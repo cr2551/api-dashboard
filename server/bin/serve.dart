@@ -1,48 +1,44 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:sla_monitor_server/sla_monitor_server.dart';
 
-/// Runs the Stripe probe on an interval AND serves the dashboard API.
+/// Probes every configured service on its own interval AND serves the
+/// dashboard API.
 ///
-/// Key: see [readStripeKey] (STRIPE_API_KEY or ../config.json). Use a
-/// test-mode key. Env: PORT (default 8080), PROBE_INTERVAL_SECONDS (default
-/// 30), DB_PATH (default probes.db), API_TOKEN (env or config.json; when set
-/// the API needs `Authorization: Bearer <token>`), LOG_LEVEL (debug, info, warn, error;
-/// default info). Listens on localhost only.
+/// Services come from `SERVICES_CONFIG` (default `../services.json`, see
+/// services.example.json); without that file it monitors Stripe only with the
+/// default thresholds. Stripe key: see [readStripeKey] (STRIPE_API_KEY or
+/// ../config.json); use a test-mode key. Env: PORT (default 8080),
+/// PROBE_INTERVAL_SECONDS (only for the no-file fallback, default 30),
+/// DB_PATH (default probes.db), API_TOKEN (env or config.json; when set the
+/// API needs `Authorization: Bearer <token>`), LOG_LEVEL (debug, info, warn,
+/// error; default info). Listens on localhost only.
 Future<void> main() async {
   final env = Platform.environment;
-  final apiKey = readStripeKey(env);
-  if (apiKey == null) {
-    stderr.writeln(
-      'No Stripe key: set STRIPE_API_KEY or STRIPE_SECRET_KEY '
-      'in config.json (use a test-mode key).',
-    );
-    exit(64);
-  }
-  final port = int.tryParse(env['PORT'] ?? '') ?? 8080;
-  final interval = Duration(
-    seconds: int.tryParse(env['PROBE_INTERVAL_SECONDS'] ?? '') ?? 30,
-  );
-
   final logger = Logger.fromEnv(env);
-  final store = ProbeStore.open(env['DB_PATH'] ?? 'probes.db');
-  const policy = SlaPolicy(provider: StripeProbe.providerName);
-  final monitor = Monitor(
-    probe: StripeProbe(apiKey: apiKey),
-    store: store,
-    policy: policy,
-    alerter: buildAlerter(env, onError: logger.error),
-    logger: logger,
-  );
+  final port = int.tryParse(env['PORT'] ?? '') ?? 8080;
 
-  Future<void> tick() async {
-    try {
-      await monitor.runOnce();
-    } catch (e) {
-      logger.error('probe cycle failed: $e');
-    }
+  final store = ProbeStore.open(env['DB_PATH'] ?? 'probes.db');
+  final List<RunningService> services;
+  try {
+    final configs = resolveServices(
+      env,
+      defaultIntervalSeconds:
+          int.tryParse(env['PROBE_INTERVAL_SECONDS'] ?? '') ?? 30,
+      onInfo: logger.info,
+    );
+    services = buildServices(
+      configs,
+      env: env,
+      store: store,
+      alerter: buildAlerter(env, onError: logger.error),
+      logger: logger,
+    );
+  } on ConfigException catch (e) {
+    stderr.writeln(e);
+    store.close();
+    exit(64);
   }
 
   final authToken = readSetting('API_TOKEN', env);
@@ -56,19 +52,24 @@ Future<void> main() async {
   }
 
   final server = await shelf_io.serve(
-    apiHandler(store: store, policies: const [policy], authToken: authToken),
+    apiHandler(
+      store: store,
+      policies: [for (final s in services) s.policy],
+      authToken: authToken,
+    ),
     InternetAddress.loopbackIPv4,
     port,
   );
   logger.info(
-    'API on http://localhost:${server.port}/api/status '
-    '(probing every ${interval.inSeconds}s, Ctrl+C to stop)',
+    'API on http://localhost:${server.port}/api/status, monitoring '
+    '${services.map((s) => '${s.config.name} (every '
+        '${s.config.interval.inSeconds}s)').join(', ')}. Ctrl+C to stop',
   );
 
-  await tick();
-  final timer = Timer.periodic(interval, (_) => tick());
+  final scheduler = ServiceScheduler(services, logger: logger);
+  await scheduler.start();
   ProcessSignal.sigint.watch().listen((_) async {
-    timer.cancel();
+    scheduler.stop();
     await server.close(force: true);
     store.close();
     exit(0);

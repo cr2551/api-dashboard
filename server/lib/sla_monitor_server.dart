@@ -1,6 +1,7 @@
 export 'src/probe_result.dart';
 export 'src/stats.dart';
 export 'src/probe.dart';
+export 'src/http_probe.dart';
 export 'src/stripe_probe.dart';
 export 'src/probe_store.dart';
 export 'src/sla.dart';
@@ -12,3 +13,4 @@ export 'src/monitor.dart';
 export 'src/api.dart';
 export 'src/config.dart';
 export 'src/services_config.dart';
+export 'src/services.dart';

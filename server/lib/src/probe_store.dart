@@ -64,22 +64,37 @@ class ProbeStore {
       'ORDER BY timestamp_us ASC, id ASC',
       [provider, since.microsecondsSinceEpoch],
     );
-    return [
-      for (final row in rows)
-        ProbeResult(
-          provider: row['provider'] as String,
-          timestamp: DateTime.fromMicrosecondsSinceEpoch(
-            row['timestamp_us'] as int,
-            isUtc: true,
-          ),
-          latency: Duration(microseconds: row['latency_us'] as int),
-          success: (row['success'] as int) == 1,
-          statusCode: row['status_code'] as int?,
-          error: row['error'] as String?,
-          errorKind: _kindFromName(row['error_kind'] as String?),
-        ),
-    ];
+    return [for (final row in rows) _toResult(row)];
   }
+
+  /// The most recent [limit] results for [provider], **newest first**. Returns
+  /// fewer when less data exists and an empty list for an unknown provider or
+  /// a [limit] of 0. Ties on the timestamp are broken by insertion order, so
+  /// the last inserted comes first.
+  List<ProbeResult> latest(String provider, int limit) {
+    if (limit < 0) throw ArgumentError.value(limit, 'limit', 'must be >= 0');
+    final rows = _db.select(
+      'SELECT * FROM probe_results '
+      'WHERE provider = ? '
+      'ORDER BY timestamp_us DESC, id DESC '
+      'LIMIT ?',
+      [provider, limit],
+    );
+    return [for (final row in rows) _toResult(row)];
+  }
+
+  static ProbeResult _toResult(Row row) => ProbeResult(
+    provider: row['provider'] as String,
+    timestamp: DateTime.fromMicrosecondsSinceEpoch(
+      row['timestamp_us'] as int,
+      isUtc: true,
+    ),
+    latency: Duration(microseconds: row['latency_us'] as int),
+    success: (row['success'] as int) == 1,
+    statusCode: row['status_code'] as int?,
+    error: row['error'] as String?,
+    errorKind: _kindFromName(row['error_kind'] as String?),
+  );
 
   static ProbeErrorKind? _kindFromName(String? name) {
     for (final kind in ProbeErrorKind.values) {

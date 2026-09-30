@@ -47,8 +47,20 @@ flutter test
    Point the app at a different backend with `--dart-define=API_BASE_URL=http://host:port`.
 
 The backend also accepts `PORT`, `PROBE_INTERVAL_SECONDS` (default 30) and `DB_PATH` (default `probes.db`).
-## Probe failures and retries
+## Alert channel: ntfy.sh
 
-Each failed probe is stored with an error category: `timeout`, `connection` (DNS, refused or dropped connection), `tls`, `http4xx`, `http5xx` or `other`.
+**Decision:** alerts go to [ntfy.sh](https://ntfy.sh) (console output stays on too).
 
-A probe that fails at the transport level (timeout, connection or TLS) is retried once before it counts, so a single dropped packet does not hurt uptime. HTTP responses are never retried: a 4xx/5xx is a real answer from the provider. The stored latency is that of the last attempt.
+**Why:** no account or SDK, one HTTP POST per message, free push notifications on phone and desktop, and it can be self-hosted later by pointing `NTFY_SERVER` elsewhere. Email needs SMTP credentials and deliverability work; Pushover is paid and needs an app token.
+
+**Config** (env var, else the same key in the git-ignored `config.json`; never commit these):
+
+
+| Key | Required | Meaning |
+|---|---|---|
+| `NTFY_TOPIC` | yes | Topic to publish to. Topics on the public server are readable by anyone who knows the name, so use a long random one. Alerts are disabled (console only) when unset. |
+| `NTFY_SERVER` | no | Server base URL, default `https://ntfy.sh`. |
+| `NTFY_TOKEN` | no | Access token for protected topics, sent as a Bearer token. |
+
+
+Delivery failures are logged, never thrown, so a broken channel cannot stop probing.

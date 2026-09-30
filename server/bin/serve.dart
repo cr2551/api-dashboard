@@ -30,7 +30,7 @@ Future<void> main() async {
     probe: StripeProbe(apiKey: apiKey),
     store: store,
     policy: policy,
-    alerter: ConsoleAlerter(),
+    alerter: buildAlerter(env),
   );
 
   Future<void> tick() async {

@@ -68,3 +68,35 @@ Delivery failures are logged, never thrown, so a broken channel cannot stop prob
 ## Logging
 
 Both `bin/serve.dart` and `bin/monitor.dart` write timestamped lines (`2026-01-01T12:00:00.000Z INFO  stripe ok 123ms 200`) covering each probe, breaches, sent alerts and storage or alert errors. Set `LOG_LEVEL` to `debug`, `info` (default), `warn` or `error` to choose how much is shown.
+
+## Services config
+
+[services.example.json](services.example.json) describes what to monitor. Copy it to `services.json` and edit it. **It never contains secrets**: API keys stay in env vars or the git-ignored `config.json`.
+
+```json
+{
+  "services": [
+    {
+      "name": "stripe",
+      "type": "stripe",
+      "intervalSeconds": 30,
+      "sla": { "maxP95LatencyMs": 1000, "minUptimePercent": 99.9, "consecutiveFailures": 2 }
+    }
+  ]
+}
+```
+
+| Field | Required | Default | Meaning |
+|---|---|---|---|
+| `name` | yes | | Unique service name, used in the API, alerts and logs. |
+| `type` | yes | | Probe type. Supported: `stripe`. |
+| `endpoint` | no | the probe's own | Overrides the probed http(s) URL. |
+| `intervalSeconds` | no | 60 | Seconds between probes. |
+| `timeoutSeconds` | no | 10 | Per-request timeout. |
+| `sla.maxP95LatencyMs` | no | 1000 | p95 latency limit. |
+| `sla.minUptimePercent` | no | 99.9 | Uptime floor, 0 to 100. |
+| `sla.windowMinutes` | no | 60 | Rolling window the SLA is judged over. |
+| `sla.minSamples` | no | 1 | Fewer probes than this in the window are not judged. |
+| `sla.consecutiveFailures` | no | 1 | A breach must hold this many evaluations in a row before alerting. |
+
+`loadServicesConfig(path)` validates the file. Unknown fields are rejected so a typo cannot silently fall back to a default, and errors name the exact field, e.g. `Invalid config at services[1].sla.minUptimePercent: must be a number between 0 and 100`. `serve.dart` does not read this file yet; that is [#28](https://github.com/cr2551/api-dashboard/issues/28).

@@ -69,6 +69,11 @@ Delivery failures are logged, never thrown, so a broken channel cannot stop prob
 
 Both `bin/serve.dart` and `bin/monitor.dart` write timestamped lines (`2026-01-01T12:00:00.000Z INFO  stripe ok 123ms 200`) covering each probe, breaches, sent alerts and storage or alert errors. Set `LOG_LEVEL` to `debug`, `info` (default), `warn` or `error` to choose how much is shown.
 
+## Testing the alert pipeline
+
+- `dart test test/pipeline_test.dart` runs probe, storage, SLA, alert and recovery end to end with a fake Stripe endpoint and a fake ntfy server.
+- `dart run bin/drill.dart` (from `server/`) runs the real pipeline once a second against a local fake endpoint that fails for four probes, then heals. It prints one breach alert, silence while the outage lasts, and one recovery. Set `NTFY_TOPIC` first to see real push notifications.
+
 ## Services config
 
 [services.example.json](services.example.json) describes what to monitor. Copy it to `services.json` and edit it. **It never contains secrets**: API keys stay in env vars or the git-ignored `config.json`.

@@ -63,7 +63,7 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 | Alert-sending function | ✅ | `NtfyAlerter` ([#22](https://github.com/cr2551/api-dashboard/issues/22), [PR #38](https://github.com/cr2551/api-dashboard/pull/38)) next to the console alerter ([#9](https://github.com/cr2551/api-dashboard/issues/9)) |
 | Wire breach detection to alert trigger | ✅ | `Monitor` alerts only when a breach opens: [#23](https://github.com/cr2551/api-dashboard/issues/23) |
 | Recovery notification | ✅ | One message per resolved breach with its duration: [#24](https://github.com/cr2551/api-dashboard/issues/24) |
-| Test full pipeline with a deliberate false breach | 🟡 | Automated test with a mocked failing endpoint exists; no full drill: [#25](https://github.com/cr2551/api-dashboard/issues/25) |
+| Test full pipeline with a deliberate false breach | ✅ | `test/pipeline_test.dart` (probe to ntfy, faked network) and `dart run bin/drill.dart`. Drill run 2026-09-30 against a local fake endpoint: 1 alert when it broke, silence while it stayed down, 1 recovery after 7s. Console only; the live ntfy push still needs a run with `NTFY_TOPIC` set: [#25](https://github.com/cr2551/api-dashboard/issues/25) |
 
 ## Phase 6: Expand coverage
 
@@ -97,7 +97,6 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 | Component | Issues |
 |---|---|
 | backend / storage | [#35](https://github.com/cr2551/api-dashboard/issues/35) last-N query |
-| backend / alerting | [#25](https://github.com/cr2551/api-dashboard/issues/25) full pipeline test |
 | backend / coverage | [#27](https://github.com/cr2551/api-dashboard/issues/27) more API probes |
 | backend / security | [#30](https://github.com/cr2551/api-dashboard/issues/30) API auth |
 
@@ -111,7 +110,7 @@ Tasks in the same area can touch the same files (for example anything that chang
 | [#29](https://github.com/cr2551/api-dashboard/issues/29) per-service thresholds | #26 |
 | [#31](https://github.com/cr2551/api-dashboard/issues/31) app credentials | #30 |
 | [#32](https://github.com/cr2551/api-dashboard/issues/32) deploy | #30 |
-| [#34](https://github.com/cr2551/api-dashboard/issues/34) case studies | #32 |
+| [#34](https://github.com/cr2551/api-dashboard/issues/34) case studies | #32 (and a real breach to write about) |
 
 ### Dependency chains
 

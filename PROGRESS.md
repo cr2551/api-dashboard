@@ -62,7 +62,7 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 | Pick alert channel | ✅ | ntfy.sh, see the README: [#21](https://github.com/cr2551/api-dashboard/issues/21), [PR #38](https://github.com/cr2551/api-dashboard/pull/38) |
 | Alert-sending function | ✅ | `NtfyAlerter` ([#22](https://github.com/cr2551/api-dashboard/issues/22), [PR #38](https://github.com/cr2551/api-dashboard/pull/38)) next to the console alerter ([#9](https://github.com/cr2551/api-dashboard/issues/9)) |
 | Wire breach detection to alert trigger | ✅ | `Monitor` alerts only when a breach opens: [#23](https://github.com/cr2551/api-dashboard/issues/23) |
-| Recovery notification | 🟡 | `NtfyAlerter.recovered` and resolved events exist, not yet called by `Monitor`: [#24](https://github.com/cr2551/api-dashboard/issues/24) |
+| Recovery notification | ✅ | One message per resolved breach with its duration: [#24](https://github.com/cr2551/api-dashboard/issues/24) |
 | Test full pipeline with a deliberate false breach | 🟡 | Automated test with a mocked failing endpoint exists; no full drill: [#25](https://github.com/cr2551/api-dashboard/issues/25) |
 
 ## Phase 6: Expand coverage
@@ -97,17 +97,16 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 | Component | Issues |
 |---|---|
 | backend / storage | [#35](https://github.com/cr2551/api-dashboard/issues/35) last-N query |
-| backend / alerting | [#24](https://github.com/cr2551/api-dashboard/issues/24) recovery notification |
+| backend / alerting | [#25](https://github.com/cr2551/api-dashboard/issues/25) full pipeline test |
 | backend / coverage | [#26](https://github.com/cr2551/api-dashboard/issues/26) services config file · [#27](https://github.com/cr2551/api-dashboard/issues/27) more API probes |
 | backend / security | [#30](https://github.com/cr2551/api-dashboard/issues/30) API auth |
 
-Tasks in the same area can touch the same files (for example #24 and #25 both touch `Monitor`), so tell each other before starting.
+Tasks in the same area can touch the same files (for example anything that changes `Monitor`), so tell each other before starting.
 
 ### Blocked until others are done
 
 | Issue | Waits for |
 |---|---|
-| [#25](https://github.com/cr2551/api-dashboard/issues/25) full pipeline test | #24 |
 | [#28](https://github.com/cr2551/api-dashboard/issues/28) multi-service serve.dart | #26 |
 | [#29](https://github.com/cr2551/api-dashboard/issues/29) per-service thresholds | #26 |
 | [#31](https://github.com/cr2551/api-dashboard/issues/31) app credentials | #30 |

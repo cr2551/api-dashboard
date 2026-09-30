@@ -30,7 +30,8 @@ class Monitor {
 
   /// Runs one cycle and returns the probe result. A breach alerts once, when
   /// it opens; it stays silent while it persists and alerts again only if it
-  /// resolves and later reopens. (Resolved events are not announced yet.)
+  /// resolves and later reopens. A resolved breach sends one recovery message
+  /// saying how long it lasted.
   ///
   /// A storage or alerter failure is logged and does not stop the cycle.
   Future<ProbeResult> runOnce() async {
@@ -50,18 +51,19 @@ class Monitor {
         policy.provider,
         since: _now().subtract(policy.window),
       );
-      events = tracker.update(policy.provider, detectBreaches(policy, window));
+      events = tracker.update(
+        policy.provider,
+        detectBreaches(policy, window),
+        at: _now(),
+      );
     } catch (e) {
       logger.error('could not evaluate ${policy.provider} SLA: $e');
       return result;
     }
 
     for (final event in events) {
-      if (event.kind != BreachEventKind.opened) {
-        logger.info(
-          '${event.breach.provider} ${event.breach.type.name} breach '
-          'resolved',
-        );
+      if (event.kind == BreachEventKind.resolved) {
+        _sendRecovery(event);
         continue;
       }
       logger.warn('SLA breach opened: ${event.breach}');
@@ -76,6 +78,20 @@ class Monitor {
       }
     }
     return result;
+  }
+
+  void _sendRecovery(BreachEvent event) {
+    final b = event.breach;
+    final lasted = event.duration ?? Duration.zero;
+    logger.info(
+      '${b.provider} ${b.type.name} breach resolved after '
+      '${formatDuration(lasted)}',
+    );
+    try {
+      alerter.recovered(b, lasted);
+    } catch (e) {
+      logger.error('recovery alert failed for ${b.provider}: $e');
+    }
   }
 
   void _logResult(ProbeResult r) {

@@ -1,10 +1,11 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 
 import '../data/api_client.dart';
 import '../data/models.dart';
 import '../widgets/service_card.dart';
+import 'service_detail_screen.dart';
 
 /// Home screen: current status of every monitored service.
 class StatusScreen extends StatefulWidget {
@@ -20,6 +21,7 @@ class StatusScreen extends StatefulWidget {
   /// How often to poll the backend; null disables auto-refresh.
   final Duration? refreshInterval;
 
+  /// Overrides the default navigation to the service detail screen.
   final void Function(ServiceStatus service)? onOpenService;
 
   @override
@@ -66,6 +68,17 @@ class _StatusScreenState extends State<StatusScreen> {
     }
   }
 
+  void _openDetail(ServiceStatus service) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ServiceDetailScreen(
+          client: widget.client,
+          provider: service.provider,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -108,9 +121,7 @@ class _StatusScreenState extends State<StatusScreen> {
               ServiceCard(
                 service: service,
                 now: snapshot.generatedAt,
-                onTap: widget.onOpenService == null
-                    ? null
-                    : () => widget.onOpenService!(service),
+                onTap: () => (widget.onOpenService ?? _openDetail)(service),
               ),
             if (snapshot.services.isEmpty)
               const Padding(

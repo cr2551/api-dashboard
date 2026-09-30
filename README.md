@@ -1,6 +1,10 @@
-﻿# API Dashboard
+# API Dashboard
 
 A SaaS Status & SLA Breach Monitor. It actively probes external APIs from our own system (starting with payment processors like Stripe), measures latency and uptime, and alerts when a provider breaches a defined SLA threshold.
+
+## Project status
+
+See [PROGRESS.md](PROGRESS.md) for what is built, what is left, and which tasks can be worked on independently.
 
 ## Architecture
 

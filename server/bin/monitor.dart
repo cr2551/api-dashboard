@@ -28,7 +28,7 @@ Future<void> main() async {
     probe: StripeProbe(apiKey: apiKey),
     store: store,
     policy: const SlaPolicy(provider: StripeProbe.providerName),
-    alerter: ConsoleAlerter(),
+    alerter: buildAlerter(env),
   );
 
   Future<void> tick() async {

@@ -5,6 +5,7 @@ export 'src/stripe_probe.dart';
 export 'src/probe_store.dart';
 export 'src/sla.dart';
 export 'src/alerter.dart';
+export 'src/ntfy_alerter.dart';
 export 'src/monitor.dart';
 export 'src/api.dart';
 export 'src/config.dart';

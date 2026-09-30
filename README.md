@@ -1,6 +1,10 @@
-﻿# API Dashboard
+# API Dashboard
 
 A SaaS Status & SLA Breach Monitor. It actively probes external APIs from our own system (starting with payment processors like Stripe), measures latency and uptime, and alerts when a provider breaches a defined SLA threshold.
+
+## Project status
+
+See [PROGRESS.md](PROGRESS.md) for what is built, what is left, and which tasks can be worked on independently.
 
 ## Architecture
 
@@ -51,10 +55,12 @@ The backend also accepts `PORT`, `PROBE_INTERVAL_SECONDS` (default 30) and `DB_P
 
 **Config** (env var, else the same key in the git-ignored `config.json`; never commit these):
 
+
 | Key | Required | Meaning |
 |---|---|---|
 | `NTFY_TOPIC` | yes | Topic to publish to. Topics on the public server are readable by anyone who knows the name, so use a long random one. Alerts are disabled (console only) when unset. |
 | `NTFY_SERVER` | no | Server base URL, default `https://ntfy.sh`. |
 | `NTFY_TOKEN` | no | Access token for protected topics, sent as a Bearer token. |
+
 
 Delivery failures are logged, never thrown, so a broken channel cannot stop probing.

@@ -9,7 +9,8 @@ class SlaPolicy {
     this.minUptimePercent = 99.9,
     this.window = const Duration(hours: 1),
     this.minSamples = 1,
-  });
+    this.consecutiveFailures = 1,
+  }) : assert(consecutiveFailures >= 1);
 
   final String provider;
   final Duration maxP95Latency;
@@ -18,6 +19,10 @@ class SlaPolicy {
 
   /// Fewer probes than this in the window is too little data to judge.
   final int minSamples;
+
+  /// A breach is only reported once it has shown up in this many evaluations
+  /// in a row (one evaluation per probe). 1 reports every breach immediately.
+  final int consecutiveFailures;
 }
 
 enum SlaBreachType { latency, uptime }
@@ -37,10 +42,36 @@ class SlaBreach {
   String toString() => 'SlaBreach($provider, $type: $message)';
 }
 
-/// Evaluates [results] (already limited to the policy window) against
-/// [policy]. Returns an empty list when the SLA is met or there is not enough
-/// data to decide.
+/// Evaluates [results] (oldest first, already limited to the policy window)
+/// against [policy]. Returns an empty list when the SLA is met or there is not
+/// enough data to decide.
+///
+/// With [SlaPolicy.consecutiveFailures] above 1, a breach is only reported if
+/// the same breach type also held when judged as of each of the previous
+/// probes, so a single blip does not count and recovery resets the streak.
 List<SlaBreach> detectBreaches(SlaPolicy policy, List<ProbeResult> results) {
+  final latest = _evaluate(policy, results);
+  if (policy.consecutiveFailures <= 1) return latest;
+
+  return [
+    for (final breach in latest)
+      if (_heldForPreviousEvaluations(policy, results, breach.type)) breach,
+  ];
+}
+
+bool _heldForPreviousEvaluations(
+  SlaPolicy policy,
+  List<ProbeResult> results,
+  SlaBreachType type,
+) {
+  for (var back = 1; back < policy.consecutiveFailures; back++) {
+    final earlier = results.sublist(0, results.length - back);
+    if (!_evaluate(policy, earlier).any((b) => b.type == type)) return false;
+  }
+  return true;
+}
+
+List<SlaBreach> _evaluate(SlaPolicy policy, List<ProbeResult> results) {
   if (results.length < policy.minSamples) return const [];
   final breaches = <SlaBreach>[];
 

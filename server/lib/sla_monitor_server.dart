@@ -4,6 +4,7 @@ export 'src/probe.dart';
 export 'src/stripe_probe.dart';
 export 'src/probe_store.dart';
 export 'src/sla.dart';
+export 'src/breach_tracker.dart';
 export 'src/alerter.dart';
 export 'src/ntfy_alerter.dart';
 export 'src/monitor.dart';

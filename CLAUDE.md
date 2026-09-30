@@ -1,4 +1,4 @@
-﻿# CLAUDE.md
+# CLAUDE.md
 
 ## Project
 
@@ -34,3 +34,4 @@ A SaaS Status & SLA Breach Monitor. It actively probes external APIs from our ow
 - Backend commands run from `server/`: `dart pub get`, `dart analyze`, `dart test`.
 - Run the whole app: `dart run bin/serve.dart` in `server/`, then `flutter run -d chrome` (see README).
 - Flutter code: `lib/data` (models + ApiClient), `lib/screens`, `lib/widgets`. Tests mirror this under `test/`.
+- Keep `PROGRESS.md` up to date: when a task finishes, change its status and link the issue/PR in the same change. Tasks live in GitHub issues (milestone = phase, `component:*` labels, `independent` / `has-dependencies`).

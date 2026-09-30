@@ -13,13 +13,22 @@ class ProbeStore {
         latency_us INTEGER NOT NULL,
         success INTEGER NOT NULL,
         status_code INTEGER,
-        error TEXT
+        error TEXT,
+        error_kind TEXT
       )
     ''');
+    _addErrorKindColumnIfMissing();
     _db.execute('''
       CREATE INDEX IF NOT EXISTS idx_probe_results_provider_time
       ON probe_results (provider, timestamp_us)
     ''');
+  }
+
+  /// Databases created before error categories existed lack the column.
+  void _addErrorKindColumnIfMissing() {
+    final columns = _db.select('PRAGMA table_info(probe_results)');
+    if (columns.any((c) => c['name'] == 'error_kind')) return;
+    _db.execute('ALTER TABLE probe_results ADD COLUMN error_kind TEXT');
   }
 
   /// Opens (or creates) the database file at [path].
@@ -33,8 +42,8 @@ class ProbeStore {
   void insert(ProbeResult r) {
     _db.execute(
       'INSERT INTO probe_results '
-      '(provider, timestamp_us, latency_us, success, status_code, error) '
-      'VALUES (?, ?, ?, ?, ?, ?)',
+      '(provider, timestamp_us, latency_us, success, status_code, error, '
+      'error_kind) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [
         r.provider,
         r.timestamp.microsecondsSinceEpoch,
@@ -42,6 +51,7 @@ class ProbeStore {
         r.success ? 1 : 0,
         r.statusCode,
         r.error,
+        r.errorKind?.name,
       ],
     );
   }
@@ -66,8 +76,16 @@ class ProbeStore {
           success: (row['success'] as int) == 1,
           statusCode: row['status_code'] as int?,
           error: row['error'] as String?,
+          errorKind: _kindFromName(row['error_kind'] as String?),
         ),
     ];
+  }
+
+  static ProbeErrorKind? _kindFromName(String? name) {
+    for (final kind in ProbeErrorKind.values) {
+      if (kind.name == name) return kind;
+    }
+    return null;
   }
 
   void close() => _db.close();

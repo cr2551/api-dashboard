@@ -72,6 +72,62 @@ void main() {
     expect(alerts.single.type, SlaBreachType.uptime);
   });
 
+  group('alert de-duplication', () {
+    late DateTime clock;
+
+    ProbeResult at(DateTime t, {bool ok = true}) => ProbeResult(
+      provider: 'stripe',
+      timestamp: t,
+      latency: const Duration(milliseconds: 100),
+      success: ok,
+    );
+
+    Monitor clocked(List<ProbeResult> probes) => Monitor(
+      probe: FakeProbe(probes),
+      store: store,
+      policy: policy,
+      alerter: _Recorder(alerts),
+      now: () => clock,
+    );
+
+    test('a persistent breach alerts once', () async {
+      final t = DateTime.utc(2026, 1, 1, 12);
+      final m = clocked([
+        at(t),
+        for (var i = 1; i <= 4; i++) at(t.add(Duration(minutes: i)), ok: false),
+      ]);
+      for (var i = 0; i <= 4; i++) {
+        clock = t.add(Duration(minutes: i));
+        await m.runOnce();
+      }
+      expect(alerts, hasLength(1));
+      expect(alerts.single.type, SlaBreachType.uptime);
+    });
+
+    test('alerts again when a resolved breach reopens', () async {
+      final t = DateTime.utc(2026, 1, 1, 12);
+      final later = DateTime.utc(2026, 1, 1, 14);
+      final m = clocked([
+        at(t),
+        at(t.add(const Duration(minutes: 1)), ok: false), // opens
+        at(t.add(const Duration(minutes: 2)), ok: false), // silent
+        at(later), // old results left the window: resolved
+        at(later.add(const Duration(minutes: 1)), ok: false), // reopens
+      ]);
+      for (final time in [
+        t,
+        t.add(const Duration(minutes: 1)),
+        t.add(const Duration(minutes: 2)),
+        later,
+        later.add(const Duration(minutes: 1)),
+      ]) {
+        clock = time;
+        await m.runOnce();
+      }
+      expect(alerts, hasLength(2));
+    });
+  });
+
   test('ignores results older than the window', () async {
     store.insert(
       ProbeResult(

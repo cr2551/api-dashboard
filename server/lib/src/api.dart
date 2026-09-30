@@ -10,7 +10,7 @@ import 'stats.dart';
 const _cors = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET, OPTIONS',
-  'access-control-allow-headers': 'content-type',
+  'access-control-allow-headers': 'content-type, authorization',
 };
 
 /// JSON API for the dashboard:
@@ -18,9 +18,14 @@ const _cors = {
 /// * `GET /api/status`: one entry per policy (state, latest probe, uptime,
 ///   latency stats and current SLA breaches over the policy window).
 /// * `GET /api/history?provider=stripe&minutes=60`: probes for the chart.
+///
+/// When [authToken] is set, every request except the CORS preflight must send
+/// `Authorization: Bearer <token>`, otherwise it gets a 401. With no token the
+/// API is open, which is only safe while it listens on localhost.
 Handler apiHandler({
   required ProbeStore store,
   required List<SlaPolicy> policies,
+  String? authToken,
   DateTime Function()? now,
 }) {
   final clock = now ?? DateTime.now;
@@ -58,8 +63,21 @@ Handler apiHandler({
   }
 
   return (Request request) {
+    // Browsers send the preflight without credentials, so it must not need
+    // them; it carries no data.
     if (request.method == 'OPTIONS') {
       return Response(204, headers: _cors);
+    }
+    if (authToken != null && !_hasValidToken(request, authToken)) {
+      return Response(
+        401,
+        body: jsonEncode({'error': 'unauthorized'}),
+        headers: {
+          'content-type': 'application/json',
+          'www-authenticate': 'Bearer',
+          ..._cors,
+        },
+      );
     }
     if (request.method != 'GET') return error(405, 'method not allowed');
 
@@ -94,6 +112,28 @@ Handler apiHandler({
         return error(404, 'not found');
     }
   };
+}
+
+bool _hasValidToken(Request request, String expected) {
+  final header = request.headers['authorization'];
+  if (header == null) return false;
+  const prefix = 'bearer ';
+  if (header.length <= prefix.length ||
+      header.substring(0, prefix.length).toLowerCase() != prefix) {
+    return false;
+  }
+  final given = header.substring(prefix.length).trim();
+  return _constantTimeEquals(utf8.encode(given), utf8.encode(expected));
+}
+
+/// Compares without stopping at the first difference, so response time does
+/// not reveal how much of a guessed token was right.
+bool _constantTimeEquals(List<int> a, List<int> b) {
+  var diff = a.length ^ b.length;
+  for (var i = 0; i < a.length && i < b.length; i++) {
+    diff |= a[i] ^ b[i];
+  }
+  return diff == 0;
 }
 
 Map<String, dynamic> _probeJson(ProbeResult r) => {

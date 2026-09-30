@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/models.dart';
+import 'failure_chip.dart';
 
 const _upColor = Color(0xFF2E9E5B);
 const _downColor = Color(0xFFD64545);
@@ -117,6 +118,13 @@ class ServiceCard extends StatelessWidget {
                           '${last.success ? '' : ' · ${last.error ?? 'failed'}'}',
                 style: theme.textTheme.bodySmall,
               ),
+              if (last != null && !last.success) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FailureChip(kind: last.errorKind),
+                ),
+              ],
               for (final b in service.breaches) ...[
                 const SizedBox(height: 8),
                 _BreachBanner(breach: b),

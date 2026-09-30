@@ -1,3 +1,5 @@
+import 'failure_kind.dart';
+
 enum ServiceState { up, down, unknown }
 
 class ProbePoint {
@@ -7,6 +9,7 @@ class ProbePoint {
     required this.success,
     this.statusCode,
     this.error,
+    this.errorKind,
   });
 
   factory ProbePoint.fromJson(Map<String, dynamic> json) => ProbePoint(
@@ -15,6 +18,7 @@ class ProbePoint {
     success: json['success'] as bool,
     statusCode: json['statusCode'] as int?,
     error: json['error'] as String?,
+    errorKind: FailureKind.parse(json['errorKind'] as String?),
   );
 
   final DateTime timestamp;
@@ -22,6 +26,9 @@ class ProbePoint {
   final bool success;
   final int? statusCode;
   final String? error;
+
+  /// Why the probe failed; null on success or for older backends.
+  final FailureKind? errorKind;
 }
 
 class SlaBreachInfo {

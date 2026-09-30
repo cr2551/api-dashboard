@@ -40,6 +40,39 @@ void main() {
   });
   tearDown(() => store.close());
 
+  group('errorKind', () {
+    test('is exposed on the last probe and in the history points', () async {
+      store
+        ..insert(
+          ProbeResult(
+            provider: 'stripe',
+            timestamp: now.subtract(const Duration(minutes: 2)),
+            latency: const Duration(milliseconds: 100),
+            success: true,
+            statusCode: 200,
+          ),
+        )
+        ..insert(
+          ProbeResult(
+            provider: 'stripe',
+            timestamp: now.subtract(const Duration(minutes: 1)),
+            latency: const Duration(milliseconds: 50),
+            success: false,
+            error: 'HTTP 503',
+            statusCode: 503,
+            errorKind: ProbeErrorKind.http5xx,
+          ),
+        );
+
+      final status = (await getJson('/api/status'))['services'].single;
+      expect(status['lastProbe']['errorKind'], 'http5xx');
+
+      final points =
+          (await getJson('/api/history?provider=stripe'))['points'] as List;
+      expect(points.map((p) => p['errorKind']), [null, 'http5xx']);
+    });
+  });
+
   group('displayName', () {
     test('is included when configured and null otherwise', () async {
       handler = apiHandler(

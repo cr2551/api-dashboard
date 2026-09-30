@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../data/api_client.dart';
+import '../data/failure_kind.dart';
 import '../data/models.dart';
+import '../widgets/failure_chip.dart';
 import '../widgets/latency_chart.dart';
 import '../widgets/service_card.dart';
 import '../widgets/token_dialog.dart';
@@ -188,6 +190,10 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
             ),
           ],
         ),
+        if (failures > 0) ...[
+          const SizedBox(height: 16),
+          _FailureSummary(points: points),
+        ],
         const SizedBox(height: 16),
         Text('Latency', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
@@ -202,6 +208,53 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   ),
                 ),
         ),
+      ],
+    );
+  }
+}
+
+/// Failed probes in [points] grouped by kind, most frequent first. Failures
+/// without a category (stored by an older backend) are grouped under null.
+List<MapEntry<FailureKind?, int>> failureCounts(List<ProbePoint> points) {
+  final counts = <FailureKind?, int>{};
+  for (final p in points) {
+    if (!p.success) counts[p.errorKind] = (counts[p.errorKind] ?? 0) + 1;
+  }
+  return counts.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+}
+
+/// What went wrong in the selected range: a chip per failure kind with its
+/// count, and a plain-language hint about the most recent failure.
+class _FailureSummary extends StatelessWidget {
+  const _FailureSummary({required this.points});
+
+  final List<ProbePoint> points;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final counts = failureCounts(points);
+    final lastFailure = points.lastWhere((p) => !p.success);
+    final hint = lastFailure.errorKind?.hint;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Failure types', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          children: [
+            for (final e in counts) FailureChip(kind: e.key, count: e.value),
+          ],
+        ),
+        if (hint != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Most recent: ${lastFailure.errorKind!.label}. $hint',
+            style: theme.textTheme.bodySmall,
+          ),
+        ],
       ],
     );
   }

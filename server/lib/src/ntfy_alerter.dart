@@ -28,6 +28,7 @@ class NtfyAlerter implements Alerter {
     Map<String, String> env, {
     String? configPath,
     http.Client? client,
+    void Function(String message)? onError,
   }) {
     final topic = readSetting('NTFY_TOPIC', env, configPath: configPath);
     if (topic == null) return null;
@@ -37,6 +38,7 @@ class NtfyAlerter implements Alerter {
       server: server == null ? null : Uri.parse(server),
       token: readSetting('NTFY_TOKEN', env, configPath: configPath),
       client: client,
+      onError: onError,
     );
   }
 
@@ -99,8 +101,16 @@ class NtfyAlerter implements Alerter {
 }
 
 /// Console alerts, plus ntfy when `NTFY_TOPIC` is configured.
-Alerter buildAlerter(Map<String, String> env, {String? configPath}) {
-  final ntfy = NtfyAlerter.fromConfig(env, configPath: configPath);
+Alerter buildAlerter(
+  Map<String, String> env, {
+  String? configPath,
+  void Function(String message)? onError,
+}) {
+  final ntfy = NtfyAlerter.fromConfig(
+    env,
+    configPath: configPath,
+    onError: onError,
+  );
   return ntfy == null
       ? ConsoleAlerter()
       : MultiAlerter([ConsoleAlerter(), ntfy]);

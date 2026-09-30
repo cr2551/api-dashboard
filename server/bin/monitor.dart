@@ -8,7 +8,8 @@ import 'package:sla_monitor_server/sla_monitor_server.dart';
 ///
 /// Key: STRIPE_API_KEY env var, else STRIPE_SECRET_KEY from the JSON file at
 /// CONFIG_PATH (default ../config.json, git-ignored). Use a test-mode key.
-/// Env: PROBE_INTERVAL_SECONDS (default 60), DB_PATH (default probes.db).
+/// Env: PROBE_INTERVAL_SECONDS (default 60), DB_PATH (default probes.db),
+/// LOG_LEVEL (debug, info, warn, error; default info).
 Future<void> main() async {
   final env = Platform.environment;
   final apiKey = readStripeKey(env);
@@ -23,21 +24,22 @@ Future<void> main() async {
     seconds: int.tryParse(env['PROBE_INTERVAL_SECONDS'] ?? '') ?? 60,
   );
 
+  final logger = Logger.fromEnv(env);
   final store = ProbeStore.open(env['DB_PATH'] ?? 'probes.db');
   final monitor = Monitor(
     probe: StripeProbe(apiKey: apiKey),
     store: store,
     policy: const SlaPolicy(provider: StripeProbe.providerName),
-    alerter: buildAlerter(env),
+    alerter: buildAlerter(env, onError: logger.error),
+    logger: logger,
   );
 
   Future<void> tick() async {
-    final r = await monitor.runOnce();
-    print(
-      '${r.timestamp.toIso8601String()} ${r.provider} '
-      '${r.success ? 'ok' : 'FAIL'} ${r.latency.inMilliseconds}ms '
-      '${r.statusCode ?? r.error ?? ''}',
-    );
+    try {
+      await monitor.runOnce();
+    } catch (e) {
+      logger.error('probe cycle failed: $e');
+    }
   }
 
   await tick();

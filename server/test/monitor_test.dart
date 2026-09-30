@@ -128,6 +128,95 @@ void main() {
     });
   });
 
+  group('logging', () {
+    late List<String> lines;
+
+    Monitor logged(List<ProbeResult> probes, {Alerter? alerter}) => Monitor(
+      probe: FakeProbe(probes),
+      store: store,
+      policy: policy,
+      alerter: alerter ?? _Recorder(alerts),
+      logger: Logger(level: LogLevel.debug, sink: lines.add, now: () => now),
+      now: () => now,
+    );
+
+    setUp(() => lines = []);
+
+    test('logs the probe start at debug level', () async {
+      await logged([result(100)]).runOnce();
+      expect(lines.first, contains('DEBUG probing stripe'));
+    });
+
+    test('logs ok and failed results with latency and error kind', () async {
+      final m = logged([
+        result(120),
+        ProbeResult(
+          provider: 'stripe',
+          timestamp: now,
+          latency: const Duration(milliseconds: 40),
+          success: false,
+          error: 'HTTP 503',
+          errorKind: ProbeErrorKind.http5xx,
+        ),
+      ]);
+      await m.runOnce();
+      await m.runOnce();
+      expect(lines.any((l) => l.contains('INFO  stripe ok 120ms')), isTrue);
+      expect(
+        lines.any(
+          (l) => l.contains('WARN  stripe FAIL 40ms http5xx: HTTP 503'),
+        ),
+        isTrue,
+      );
+    });
+
+    test('logs a breach opening and the alert being sent', () async {
+      final m = logged([result(100), result(100, ok: false)]);
+      await m.runOnce();
+      await m.runOnce();
+      expect(lines.any((l) => l.contains('SLA breach opened')), isTrue);
+      expect(lines.any((l) => l.contains('alert sent for stripe')), isTrue);
+    });
+
+    test('logs a failing alerter without stopping the cycle', () async {
+      final m = logged([
+        result(100),
+        result(100, ok: false),
+      ], alerter: _Throwing());
+      await m.runOnce();
+      await m.runOnce();
+      expect(lines.any((l) => l.contains('ERROR alert failed')), isTrue);
+    });
+
+    test('logs storage errors instead of throwing', () async {
+      final m = logged([result(100)]);
+      store.close();
+      await m.runOnce();
+      expect(
+        lines.any((l) => l.contains('ERROR could not store stripe result')),
+        isTrue,
+      );
+      expect(
+        lines.any((l) => l.contains('ERROR could not evaluate stripe SLA')),
+        isTrue,
+      );
+    });
+
+    test('info level hides debug lines', () async {
+      final quiet = <String>[];
+      await Monitor(
+        probe: FakeProbe([result(100)]),
+        store: store,
+        policy: policy,
+        alerter: _Recorder(alerts),
+        logger: Logger(sink: quiet.add),
+        now: () => now,
+      ).runOnce();
+      expect(quiet.any((l) => l.contains('DEBUG')), isFalse);
+      expect(quiet.single, contains('INFO  stripe ok'));
+    });
+  });
+
   test('ignores results older than the window', () async {
     store.insert(
       ProbeResult(
@@ -171,6 +260,11 @@ void main() {
       expect(lines.single, '[SLA BREACH] stripe (latency): p95 too high');
     });
   });
+}
+
+class _Throwing implements Alerter {
+  @override
+  void alert(SlaBreach breach) => throw StateError('channel down');
 }
 
 class _Recorder implements Alerter {

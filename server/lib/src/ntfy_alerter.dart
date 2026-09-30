@@ -57,11 +57,12 @@ class NtfyAlerter implements Alerter {
     tags: 'rotating_light',
   );
 
-  /// Tells the channel that [breach] is over.
-  void recovered(SlaBreach breach) => _send(
+  @override
+  void recovered(SlaBreach breach, Duration duration) => _send(
     title: 'SLA recovered: ${breach.provider} (${breach.type.name})',
     body:
-        'Back within SLA (was: ${breach.message})\n'
+        'Back within SLA after ${formatDuration(duration)} '
+        '(was: ${breach.message})\n'
         'at ${_now().toUtc().toIso8601String()}',
     priority: 'default',
     tags: 'white_check_mark',
@@ -126,6 +127,13 @@ class MultiAlerter implements Alerter {
   void alert(SlaBreach breach) {
     for (final a in alerters) {
       a.alert(breach);
+    }
+  }
+
+  @override
+  void recovered(SlaBreach breach, Duration duration) {
+    for (final a in alerters) {
+      a.recovered(breach, duration);
     }
   }
 }

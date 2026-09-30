@@ -57,12 +57,14 @@ void main() {
   );
 
   test('sends a recovery message', () async {
-    alerter((_) async => http.Response('', 200)).recovered(breach);
+    alerter((_) async => http.Response('', 200))
+        .recovered(breach, const Duration(minutes: 12, seconds: 5));
     await settle();
 
     final req = sent.single;
     expect(req.headers['Title'], contains('recovered'));
     expect(req.headers['Title'], contains('stripe'));
+    expect(req.body, contains('12m 5s'));
     expect(req.body, contains('p95 latency 900ms exceeds 500ms'));
   });
 
@@ -93,6 +95,14 @@ void main() {
     MultiAlerter([_Recorder(a), _Recorder(b)]).alert(breach);
     expect(a, [breach]);
     expect(b, [breach]);
+  });
+
+  test('MultiAlerter forwards recoveries to every alerter', () {
+    final a = _Recorder([]);
+    final b = _Recorder([]);
+    MultiAlerter([a, b]).recovered(breach, const Duration(seconds: 3));
+    expect(a.recoveries, [const Duration(seconds: 3)]);
+    expect(b.recoveries, [const Duration(seconds: 3)]);
   });
 
   group('fromConfig', () {
@@ -133,7 +143,12 @@ void main() {
 class _Recorder implements Alerter {
   _Recorder(this.breaches);
   final List<SlaBreach> breaches;
+  final List<Duration> recoveries = [];
 
   @override
   void alert(SlaBreach breach) => breaches.add(breach);
+
+  @override
+  void recovered(SlaBreach breach, Duration duration) =>
+      recoveries.add(duration);
 }

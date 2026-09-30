@@ -126,6 +126,58 @@ void main() {
       }
       expect(alerts, hasLength(2));
     });
+
+    test('sends one recovery with how long the breach lasted', () async {
+      final t = DateTime.utc(2026, 1, 1, 12);
+      final later = DateTime.utc(2026, 1, 1, 14);
+      final recoveries = <Duration>[];
+      final m = Monitor(
+        probe: FakeProbe([
+          at(t),
+          at(t.add(const Duration(minutes: 1)), ok: false), // opens at 12:01
+          at(later), // resolved at 14:00
+          at(later.add(const Duration(minutes: 1))),
+        ]),
+        store: store,
+        policy: policy,
+        alerter: _Recorder(alerts, recoveries),
+        now: () => clock,
+      );
+      for (final time in [
+        t,
+        t.add(const Duration(minutes: 1)),
+        later,
+        later.add(const Duration(minutes: 1)),
+      ]) {
+        clock = time;
+        await m.runOnce();
+      }
+      expect(alerts, hasLength(1));
+      expect(recoveries, [const Duration(hours: 1, minutes: 59)]);
+    });
+
+    test('a failing recovery alert is logged, not thrown', () async {
+      final t = DateTime.utc(2026, 1, 1, 12);
+      final later = DateTime.utc(2026, 1, 1, 14);
+      final lines = <String>[];
+      final m = Monitor(
+        probe: FakeProbe([
+          at(t),
+          at(t.add(const Duration(minutes: 1)), ok: false),
+          at(later),
+        ]),
+        store: store,
+        policy: policy,
+        alerter: _RecoveryThrowing(),
+        logger: Logger(sink: lines.add, now: () => t),
+        now: () => clock,
+      );
+      for (final time in [t, t.add(const Duration(minutes: 1)), later]) {
+        clock = time;
+        await m.runOnce();
+      }
+      expect(lines.any((l) => l.contains('recovery alert failed')), isTrue);
+    });
   });
 
   group('logging', () {
@@ -259,18 +311,56 @@ void main() {
       );
       expect(lines.single, '[SLA BREACH] stripe (latency): p95 too high');
     });
+
+    test('formats a recovery line with the duration', () {
+      final lines = <String>[];
+      ConsoleAlerter(lines.add).recovered(
+        const SlaBreach(
+          provider: 'stripe',
+          type: SlaBreachType.latency,
+          message: 'p95 too high',
+        ),
+        const Duration(minutes: 12, seconds: 5),
+      );
+      expect(lines.single, '[SLA RECOVERED] stripe (latency) after 12m 5s');
+    });
+
+    test('formatDuration picks a readable unit', () {
+      expect(formatDuration(const Duration(seconds: 45)), '45s');
+      expect(formatDuration(const Duration(minutes: 12, seconds: 5)), '12m 5s');
+      expect(formatDuration(const Duration(hours: 2, minutes: 3)), '2h 3m');
+    });
   });
+}
+
+class _RecoveryThrowing implements Alerter {
+  @override
+  void alert(SlaBreach breach) {}
+
+  @override
+  void recovered(SlaBreach breach, Duration duration) =>
+      throw StateError('channel down');
 }
 
 class _Throwing implements Alerter {
   @override
   void alert(SlaBreach breach) => throw StateError('channel down');
+
+  @override
+  void recovered(SlaBreach breach, Duration duration) =>
+      throw StateError('channel down');
 }
 
 class _Recorder implements Alerter {
-  _Recorder(this.breaches);
+  _Recorder(this.breaches, [List<Duration>? recoveries])
+    : recoveries = recoveries ?? [];
   final List<SlaBreach> breaches;
+  final List<Duration> recoveries;
 
   @override
   void alert(SlaBreach breach) => breaches.add(breach);
+
+  @override
+  void recovered(SlaBreach breach, Duration duration) =>
+      recoveries.add(duration);
 }

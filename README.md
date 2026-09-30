@@ -25,3 +25,21 @@ flutter run
 flutter test
 ```
 
+## Running the dashboard
+
+1. Start the backend (probes Stripe and serves the API on http://localhost:8080). The key is read from `STRIPE_API_KEY` or `STRIPE_SECRET_KEY` in a git-ignored `config.json` at the repo root (use a test-mode key):
+
+   ```bash
+   cd server
+   dart run bin/serve.dart
+   ```
+
+2. In another terminal, start the Flutter app (Chrome, Windows, etc.):
+
+   ```bash
+   flutter run -d chrome
+   ```
+
+   Point the app at a different backend with `--dart-define=API_BASE_URL=http://host:port`.
+
+The backend also accepts `PORT`, `PROBE_INTERVAL_SECONDS` (default 30) and `DB_PATH` (default `probes.db`).

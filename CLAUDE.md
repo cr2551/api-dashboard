@@ -32,3 +32,5 @@ A SaaS Status & SLA Breach Monitor. It actively probes external APIs from our ow
 - Add unit tests for new logic, especially SLA detection and latency/uptime calculations.
 - Keep probing/SLA logic out of widgets so it stays unit-testable.
 - Backend commands run from `server/`: `dart pub get`, `dart analyze`, `dart test`.
+- Run the whole app: `dart run bin/serve.dart` in `server/`, then `flutter run -d chrome` (see README).
+- Flutter code: `lib/data` (models + ApiClient), `lib/screens`, `lib/widgets`. Tests mirror this under `test/`.

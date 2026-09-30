@@ -48,8 +48,11 @@ class ApiClient {
     final http.Response response;
     try {
       response = await _client.get(uri).timeout(const Duration(seconds: 10));
-    } catch (e) {
-      throw ApiException('Cannot reach the backend at $baseUrl ($e)');
+    } catch (_) {
+      throw ApiException(
+        'Cannot reach the backend at $baseUrl. Is it running? '
+        'Start it with `dart run bin/serve.dart` in the server/ folder.',
+      );
     }
     if (response.statusCode != 200) {
       throw ApiException('Backend returned HTTP ${response.statusCode}');

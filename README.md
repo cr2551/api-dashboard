@@ -105,3 +105,14 @@ Both `bin/serve.dart` and `bin/monitor.dart` write timestamped lines (`2026-01-0
 | `sla.consecutiveFailures` | no | 1 | A breach must hold this many evaluations in a row before alerting. |
 
 `loadServicesConfig(path)` validates the file. Unknown fields are rejected so a typo cannot silently fall back to a default, and errors name the exact field, e.g. `Invalid config at services[1].sla.minUptimePercent: must be a number between 0 and 100`. `serve.dart` does not read this file yet; that is [#28](https://github.com/cr2551/api-dashboard/issues/28).
+
+## API authentication
+
+Set `API_TOKEN` (env var, else the git-ignored `config.json`) and every API request must send `Authorization: Bearer <token>`; anything else gets `401 {"error":"unauthorized"}`. The CORS preflight (`OPTIONS`) stays open, since browsers send it without credentials, and 401 responses still carry CORS headers so the dashboard can read them.
+
+```bash
+API_TOKEN=$(openssl rand -hex 32) dart run bin/serve.dart
+curl -H "Authorization: Bearer <token>" http://localhost:8080/api/status
+```
+
+Without `API_TOKEN` the API is open and `serve.dart` logs a warning. That is only acceptable because it listens on localhost; set a token before exposing it (see [#32](https://github.com/cr2551/api-dashboard/issues/32)), and use HTTPS, because a bearer token is readable on plain HTTP. The Flutter app does not send the token yet ([#31](https://github.com/cr2551/api-dashboard/issues/31)), so with a token set it will get 401 until then.

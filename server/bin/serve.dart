@@ -8,7 +8,8 @@ import 'package:sla_monitor_server/sla_monitor_server.dart';
 ///
 /// Key: see [readStripeKey] (STRIPE_API_KEY or ../config.json). Use a
 /// test-mode key. Env: PORT (default 8080), PROBE_INTERVAL_SECONDS (default
-/// 30), DB_PATH (default probes.db), LOG_LEVEL (debug, info, warn, error;
+/// 30), DB_PATH (default probes.db), API_TOKEN (env or config.json; when set
+/// the API needs `Authorization: Bearer <token>`), LOG_LEVEL (debug, info, warn, error;
 /// default info). Listens on localhost only.
 Future<void> main() async {
   final env = Platform.environment;
@@ -44,8 +45,18 @@ Future<void> main() async {
     }
   }
 
+  final authToken = readSetting('API_TOKEN', env);
+  if (authToken == null) {
+    logger.warn(
+      'API_TOKEN is not set: the API is unauthenticated '
+      '(fine on localhost, not when exposed).',
+    );
+  } else {
+    logger.info('API requires a bearer token');
+  }
+
   final server = await shelf_io.serve(
-    apiHandler(store: store, policies: const [policy]),
+    apiHandler(store: store, policies: const [policy], authToken: authToken),
     InternetAddress.loopbackIPv4,
     port,
   );

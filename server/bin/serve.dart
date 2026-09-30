@@ -8,7 +8,8 @@ import 'package:sla_monitor_server/sla_monitor_server.dart';
 ///
 /// Key: see [readStripeKey] (STRIPE_API_KEY or ../config.json). Use a
 /// test-mode key. Env: PORT (default 8080), PROBE_INTERVAL_SECONDS (default
-/// 30), DB_PATH (default probes.db). Listens on localhost only.
+/// 30), DB_PATH (default probes.db), LOG_LEVEL (debug, info, warn, error;
+/// default info). Listens on localhost only.
 Future<void> main() async {
   final env = Platform.environment;
   final apiKey = readStripeKey(env);
@@ -24,22 +25,23 @@ Future<void> main() async {
     seconds: int.tryParse(env['PROBE_INTERVAL_SECONDS'] ?? '') ?? 30,
   );
 
+  final logger = Logger.fromEnv(env);
   final store = ProbeStore.open(env['DB_PATH'] ?? 'probes.db');
   const policy = SlaPolicy(provider: StripeProbe.providerName);
   final monitor = Monitor(
     probe: StripeProbe(apiKey: apiKey),
     store: store,
     policy: policy,
-    alerter: buildAlerter(env),
+    alerter: buildAlerter(env, onError: logger.error),
+    logger: logger,
   );
 
   Future<void> tick() async {
-    final r = await monitor.runOnce();
-    print(
-      '${r.timestamp.toIso8601String()} ${r.provider} '
-      '${r.success ? 'ok' : 'FAIL'} ${r.latency.inMilliseconds}ms '
-      '${r.statusCode ?? r.error ?? ''}',
-    );
+    try {
+      await monitor.runOnce();
+    } catch (e) {
+      logger.error('probe cycle failed: $e');
+    }
   }
 
   final server = await shelf_io.serve(
@@ -47,7 +49,7 @@ Future<void> main() async {
     InternetAddress.loopbackIPv4,
     port,
   );
-  print(
+  logger.info(
     'API on http://localhost:${server.port}/api/status '
     '(probing every ${interval.inSeconds}s, Ctrl+C to stop)',
   );

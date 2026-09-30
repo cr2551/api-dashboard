@@ -44,7 +44,7 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 | Choose a scheduler | ✅ | Loop-based (`Timer.periodic`) |
 | Probe runs automatically on an interval | ✅ | `bin/serve.dart` ([#12](https://github.com/cr2551/api-dashboard/issues/12)) |
 | Logging for probe execution | 🟡 | One `print` line per probe. Needs real logging: [#17](https://github.com/cr2551/api-dashboard/issues/17) |
-| Handle probe failure modes (timeouts, connection errors) | 🟡 | Timeouts/exceptions are captured as failed results. No error categories or retry policy: [#18](https://github.com/cr2551/api-dashboard/issues/18) |
+| Handle probe failure modes (timeouts, connection errors) | ✅ | Error categories + retry-once for transport errors: [#18](https://github.com/cr2551/api-dashboard/issues/18), [PR #39](https://github.com/cr2551/api-dashboard/pull/39) |
 
 ## Phase 4: SLA / breach detection
 
@@ -52,17 +52,17 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 |---|---|---|
 | Define SLA thresholds (p95 latency, uptime %) | ✅ | `SlaPolicy`; hardcoded defaults until [#26](https://github.com/cr2551/api-dashboard/issues/26)/[#29](https://github.com/cr2551/api-dashboard/issues/29) |
 | Rolling-window calculation | ✅ | [#5](https://github.com/cr2551/api-dashboard/issues/5), [#8](https://github.com/cr2551/api-dashboard/issues/8) |
-| Breach detection with debounce / consecutive-failure rule | 🟡 | Only a minimum-samples rule. Debounce: [#19](https://github.com/cr2551/api-dashboard/issues/19) |
-| State tracking to avoid duplicate alerts | ⬜ | Currently alerts every cycle: [#20](https://github.com/cr2551/api-dashboard/issues/20) |
+| Breach detection with debounce / consecutive-failure rule | ✅ | `SlaPolicy.consecutiveFailures` (default 1, off): [#19](https://github.com/cr2551/api-dashboard/issues/19), [PR #37](https://github.com/cr2551/api-dashboard/pull/37) |
+| State tracking to avoid duplicate alerts | ✅ | `BreachTracker` (in memory): [#20](https://github.com/cr2551/api-dashboard/issues/20), [PR #37](https://github.com/cr2551/api-dashboard/pull/37) |
 
 ## Phase 5: Alerting
 
 | Task | Status | Issue |
 |---|---|---|
-| Pick alert channel | ⬜ | [#21](https://github.com/cr2551/api-dashboard/issues/21) |
-| Alert-sending function | 🟡 | `Alerter` interface + console implementation only ([#9](https://github.com/cr2551/api-dashboard/issues/9)). Real channel: [#22](https://github.com/cr2551/api-dashboard/issues/22) |
-| Wire breach detection to alert trigger | 🟡 | Monitor already calls the alerter, but without de-duplication: [#23](https://github.com/cr2551/api-dashboard/issues/23) |
-| Recovery notification | ⬜ | [#24](https://github.com/cr2551/api-dashboard/issues/24) |
+| Pick alert channel | ✅ | ntfy.sh, see the README: [#21](https://github.com/cr2551/api-dashboard/issues/21), [PR #38](https://github.com/cr2551/api-dashboard/pull/38) |
+| Alert-sending function | ✅ | `NtfyAlerter` ([#22](https://github.com/cr2551/api-dashboard/issues/22), [PR #38](https://github.com/cr2551/api-dashboard/pull/38)) next to the console alerter ([#9](https://github.com/cr2551/api-dashboard/issues/9)) |
+| Wire breach detection to alert trigger | ✅ | `Monitor` alerts only when a breach opens: [#23](https://github.com/cr2551/api-dashboard/issues/23) |
+| Recovery notification | 🟡 | `NtfyAlerter.recovered` and resolved events exist, not yet called by `Monitor`: [#24](https://github.com/cr2551/api-dashboard/issues/24) |
 | Test full pipeline with a deliberate false breach | 🟡 | Automated test with a mocked failing endpoint exists; no full drill: [#25](https://github.com/cr2551/api-dashboard/issues/25) |
 
 ## Phase 6: Expand coverage
@@ -97,28 +97,23 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 | Component | Issues |
 |---|---|
 | backend / storage | [#35](https://github.com/cr2551/api-dashboard/issues/35) last-N query |
-| backend / scheduling | [#17](https://github.com/cr2551/api-dashboard/issues/17) logging · [#18](https://github.com/cr2551/api-dashboard/issues/18) failure modes |
-| backend / SLA | [#19](https://github.com/cr2551/api-dashboard/issues/19) debounce · [#20](https://github.com/cr2551/api-dashboard/issues/20) breach state tracker |
-| backend / alerting | [#21](https://github.com/cr2551/api-dashboard/issues/21) pick the alert channel |
+| backend / scheduling | [#17](https://github.com/cr2551/api-dashboard/issues/17) logging |
+| backend / alerting | [#24](https://github.com/cr2551/api-dashboard/issues/24) recovery notification |
 | backend / coverage | [#26](https://github.com/cr2551/api-dashboard/issues/26) services config file · [#27](https://github.com/cr2551/api-dashboard/issues/27) more API probes |
 | backend / security | [#30](https://github.com/cr2551/api-dashboard/issues/30) API auth |
 
-Independent tasks in the same area (for example #19 and #20) touch different files, but both feed the alerting work, so tell each other if you change `Monitor`.
+Tasks in the same area can touch the same files (for example #17 and #24 both change `Monitor`), so tell each other before starting.
 
 ### Blocked until others are done
 
 | Issue | Waits for |
 |---|---|
-| [#22](https://github.com/cr2551/api-dashboard/issues/22) send alerts | #21 |
-| [#23](https://github.com/cr2551/api-dashboard/issues/23) wire alerts | #20, #22 |
-| [#24](https://github.com/cr2551/api-dashboard/issues/24) recovery notification | #20, #22 |
-| [#25](https://github.com/cr2551/api-dashboard/issues/25) full pipeline test | #23, #24 |
+| [#25](https://github.com/cr2551/api-dashboard/issues/25) full pipeline test | #24 |
 | [#28](https://github.com/cr2551/api-dashboard/issues/28) multi-service serve.dart | #26 |
 | [#29](https://github.com/cr2551/api-dashboard/issues/29) per-service thresholds | #26 |
 | [#31](https://github.com/cr2551/api-dashboard/issues/31) app credentials | #30 |
 | [#32](https://github.com/cr2551/api-dashboard/issues/32) deploy | #30 |
-| [#33](https://github.com/cr2551/api-dashboard/issues/33) design docs | #19, #20 |
-| [#34](https://github.com/cr2551/api-dashboard/issues/34) case studies | #23, #32 |
+| [#34](https://github.com/cr2551/api-dashboard/issues/34) case studies | #32 |
 
 ### Dependency chains
 

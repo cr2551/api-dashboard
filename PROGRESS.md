@@ -71,7 +71,7 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 |---|---|---|
 | Add second and third API | ⬜ | [#27](https://github.com/cr2551/api-dashboard/issues/27) |
 | Make thresholds configurable per service | ⬜ | [#29](https://github.com/cr2551/api-dashboard/issues/29) |
-| Config file (YAML/JSON) for services | ⬜ | [#26](https://github.com/cr2551/api-dashboard/issues/26) (multi-service wiring: [#28](https://github.com/cr2551/api-dashboard/issues/28)) |
+| Config file (YAML/JSON) for services | 🟡 | Schema, validating loader and `services.example.json` done ([#26](https://github.com/cr2551/api-dashboard/issues/26)); `serve.dart` does not read it yet: [#28](https://github.com/cr2551/api-dashboard/issues/28) |
 
 ## Phase 7: Flutter dashboard
 
@@ -99,7 +99,7 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 | backend / storage | [#35](https://github.com/cr2551/api-dashboard/issues/35) last-N query |
 | backend / scheduling | [#17](https://github.com/cr2551/api-dashboard/issues/17) logging |
 | backend / alerting | [#24](https://github.com/cr2551/api-dashboard/issues/24) recovery notification |
-| backend / coverage | [#26](https://github.com/cr2551/api-dashboard/issues/26) services config file · [#27](https://github.com/cr2551/api-dashboard/issues/27) more API probes |
+| backend / coverage | [#27](https://github.com/cr2551/api-dashboard/issues/27) more API probes |
 | backend / security | [#30](https://github.com/cr2551/api-dashboard/issues/30) API auth |
 
 Tasks in the same area can touch the same files (for example #17 and #24 both change `Monitor`), so tell each other before starting.
@@ -109,7 +109,7 @@ Tasks in the same area can touch the same files (for example #17 and #24 both ch
 | Issue | Waits for |
 |---|---|
 | [#25](https://github.com/cr2551/api-dashboard/issues/25) full pipeline test | #24 |
-| [#28](https://github.com/cr2551/api-dashboard/issues/28) multi-service serve.dart | #26 |
+| [#28](https://github.com/cr2551/api-dashboard/issues/28) multi-service serve.dart | #26 (done), #27 to be useful |
 | [#29](https://github.com/cr2551/api-dashboard/issues/29) per-service thresholds | #26 |
 | [#31](https://github.com/cr2551/api-dashboard/issues/31) app credentials | #30 |
 | [#32](https://github.com/cr2551/api-dashboard/issues/32) deploy | #30 |

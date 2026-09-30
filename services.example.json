@@ -1,0 +1,17 @@
+{
+  "services": [
+    {
+      "name": "stripe",
+      "type": "stripe",
+      "intervalSeconds": 30,
+      "timeoutSeconds": 10,
+      "sla": {
+        "maxP95LatencyMs": 1000,
+        "minUptimePercent": 99.9,
+        "windowMinutes": 60,
+        "minSamples": 5,
+        "consecutiveFailures": 2
+      }
+    }
+  ]
+}

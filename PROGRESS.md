@@ -14,7 +14,7 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 
 | Step | Status | Notes |
 |---|---|---|
-| README describing what it does, architecture and setup | ✅ | [README.md](README.md). The explicit pipeline diagram and design rationale are tracked in [#33](https://github.com/cr2551/api-dashboard/issues/33) |
+| README describing what it does, architecture and setup | ✅ | [README.md](README.md). Pipeline diagram and design rationale: [#33](https://github.com/cr2551/api-dashboard/issues/33) |
 | `.gitignore` for Flutter + Dart backend | ✅ | Root `.gitignore` (also ignores `config.json`) and `server/.gitignore` (`*.db`, `.dart_tool/`) |
 | GitHub Project board with phases and issues | ✅ | Project 2; phases are milestones, components are labels |
 
@@ -87,7 +87,7 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 
 | Task | Status | Issue |
 |---|---|---|
-| Document architecture and SLA/debounce design decisions | 🟡 | README has a component overview; pipeline diagram and rationale missing: [#33](https://github.com/cr2551/api-dashboard/issues/33) |
+| Document architecture and SLA/debounce design decisions | ✅ | README "Pipeline" and "Design decisions" sections: [#33](https://github.com/cr2551/api-dashboard/issues/33) |
 | Document real breaches as case studies | ⬜ | [#34](https://github.com/cr2551/api-dashboard/issues/34) |
 
 ## Who can work on what
@@ -119,7 +119,6 @@ Tasks in the same area can touch the same files (for example anything that chang
              └──> #29 per-service thresholds
 #30 api auth ──┬──> #31 app credentials
                └──> #32 deploy ──> #34 case studies (also needs #23)
-#19 debounce + #20 tracker ──> #33 design docs
 ```
 
 ## Earlier completed work

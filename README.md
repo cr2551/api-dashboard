@@ -17,6 +17,73 @@ See [PROGRESS.md](PROGRESS.md) for what is built, what is left, and which tasks 
 
   The backend is written in Dart (`server/`), stores probe results in SQLite, and starts with a Stripe probe (`GET /v1/balance` with a test-mode key). Run it with `STRIPE_API_KEY=sk_test_... dart run bin/monitor.dart` from `server/` (optional: `PROBE_INTERVAL_SECONDS`, `DB_PATH`).
 
+## Pipeline
+
+Every probe interval the backend runs one cycle (`Monitor.runOnce`):
+
+```
+  probe ──> store ──> SLA check ──> debounce ──> de-duplicate ──> alert
+    │         │            │            │              │            │
+StripeProbe ProbeStore detectBreaches consecutive-  BreachTracker  console
+ (latency,  (SQLite,   over a rolling  Failures     (opened /      + ntfy.sh
+  status,   one row    window: p95 +   (evaluations  resolved)     (breach and
+  error     per probe) uptime %        in a row)                   recovery)
+  kind)         │
+                └──> JSON API (apiHandler, optional bearer token) ──> Flutter dashboard
+```
+
+1. **Probe** ([stripe_probe.dart](server/lib/src/stripe_probe.dart)): one authenticated, read-only request. Records latency, status code and an error category. Transport failures are retried once (see [Probe failures and retries](#probe-failures-and-retries)).
+2. **Store** ([probe_store.dart](server/lib/src/probe_store.dart)): every result, success or failure, is one SQLite row.
+3. **SLA check** ([sla.dart](server/lib/src/sla.dart)): loads the probes inside the policy window and compares p95 latency and uptime % with the thresholds.
+4. **Debounce**: a breach only counts once it has held for `consecutiveFailures` evaluations in a row.
+5. **De-duplicate** ([breach_tracker.dart](server/lib/src/breach_tracker.dart)): turns "what is breached right now" into events: *opened*, *resolved*, or nothing.
+6. **Alert** ([alerter.dart](server/lib/src/alerter.dart), [ntfy_alerter.dart](server/lib/src/ntfy_alerter.dart)): one message when a breach opens, one when it resolves (with how long it lasted).
+7. **Dashboard**: the Flutter app polls the JSON API, which reads the same SQLite rows.
+
+Probing, SLA logic and alerting live in the backend and are plain Dart classes with injected clocks and HTTP clients, so each step is unit tested without a network; `test/pipeline_test.dart` runs them all together.
+
+## Design decisions
+
+### SLA is judged over a rolling window
+A policy (`SlaPolicy`) is evaluated over the last `window` of probes (default 60 minutes), not over all time and not over a single probe. One probe is too noisy to judge; all-time numbers hide a problem that is happening now.
+
+- *Trade-off:* a breach only resolves once the bad probes age out of the window, so recovery is reported up to one window late. A shorter window recovers faster but reacts more to blips.
+- `minSamples` stops the SLA being judged on too little data (for example right after a restart, when there is one probe).
+
+### p95 latency, not the average
+Latency is judged by the **95th percentile** (nearest-rank), because an average hides slow tails: 95 fast requests and 5 that take 10 seconds still average out to something that looks fine, yet 1 in 20 users is waiting 10 seconds. p95 is also not dominated by a single freak outlier the way a maximum is. The average is still shown on the dashboard for context.
+
+- Latency statistics use **successful probes only**. A failed probe (timeout, 503) has no meaningful latency, and it is already counted against uptime, so it is not punished twice.
+
+### Uptime is the share of probes that succeeded
+`uptime % = successful probes / all probes` in the window. Probes run at a fixed interval, so each one represents the same amount of time. A probe succeeds on any 2xx; 4xx and 5xx are failures (a 4xx usually means our own key is wrong, which is also worth knowing).
+
+### Debounce: require the breach to hold
+`consecutiveFailures` (default 1, meaning off) makes a breach count only after it has been true for N evaluations in a row, one evaluation per probe. It is implemented by re-judging the window as it stood after each of the previous N probes, which keeps `detectBreaches` a pure function with no stored state.
+
+What it does and does not do:
+- It filters breaches that are **not sustained**, such as a p95 latency spike that the next probe brings back down, and it resets the moment one evaluation is healthy.
+- For **uptime over a long window** one failed probe keeps the window below the threshold until it ages out, so N mostly delays the alert by N-1 probes rather than hiding the blip. The real blip filters for uptime are the **retry-once** at probe level (a dropped packet never becomes a failed probe) and a realistic `minUptimePercent`. With the 99.9% default and a 60-minute window, a single failed probe out of 120 is already a breach; use `minSamples` and `consecutiveFailures` in [services.json](services.example.json) to tune this.
+
+### One alert per incident, not one per probe
+Without state, a 2-hour outage probed every 30 seconds would send 240 alerts. `BreachTracker` remembers which breaches are open, per provider and breach type (latency and uptime are tracked separately), and reports only the transitions:
+
+| Before | Now | Event |
+|---|---|---|
+| not breached | breached | **opened**: alert |
+| breached | breached | nothing |
+| breached | not breached | **resolved**: recovery message with the duration |
+
+- *Trade-off:* the state is **in memory**. After a restart a breach that is still active is alerted again, and its duration starts from the restart. Persisting it is a possible follow-up.
+
+### Alerting must never stop monitoring
+Storage, evaluation and alert-sending errors are logged and the cycle carries on. A broken notification channel (for example ntfy being down) cannot stop probing or the dashboard.
+
+### Known limitations
+- `serve.dart` currently runs a single Stripe service with the **default policy** (60 minutes, p95 under 1 s, 99.9% uptime, no debounce). The per-service settings in `services.json` are validated but not used yet: [#28](https://github.com/cr2551/api-dashboard/issues/28), [#29](https://github.com/cr2551/api-dashboard/issues/29).
+- Only one probe type (Stripe) exists so far: [#27](https://github.com/cr2551/api-dashboard/issues/27).
+- Breach state is not persisted across restarts (see above).
+
 ## Quality
 
 - **Automated builds and unit tests:** GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs `flutter pub get`, `flutter analyze`, `flutter test` and a build on every push and pull request.

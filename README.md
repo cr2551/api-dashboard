@@ -47,3 +47,8 @@ flutter test
    Point the app at a different backend with `--dart-define=API_BASE_URL=http://host:port`.
 
 The backend also accepts `PORT`, `PROBE_INTERVAL_SECONDS` (default 30) and `DB_PATH` (default `probes.db`).
+## Probe failures and retries
+
+Each failed probe is stored with an error category: `timeout`, `connection` (DNS, refused or dropped connection), `tls`, `http4xx`, `http5xx` or `other`.
+
+A probe that fails at the transport level (timeout, connection or TLS) is retried once before it counts, so a single dropped packet does not hurt uptime. HTTP responses are never retried: a 4xx/5xx is a real answer from the provider. The stored latency is that of the last attempt.

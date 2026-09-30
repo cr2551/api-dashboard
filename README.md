@@ -65,6 +65,10 @@ The backend also accepts `PORT`, `PROBE_INTERVAL_SECONDS` (default 30) and `DB_P
 
 Delivery failures are logged, never thrown, so a broken channel cannot stop probing.
 
+## Logging
+
+Both `bin/serve.dart` and `bin/monitor.dart` write timestamped lines (`2026-01-01T12:00:00.000Z INFO  stripe ok 123ms 200`) covering each probe, breaches, sent alerts and storage or alert errors. Set `LOG_LEVEL` to `debug`, `info` (default), `warn` or `error` to choose how much is shown.
+
 ## Services config
 
 [services.example.json](services.example.json) describes what to monitor. Copy it to `services.json` and edit it. **It never contains secrets**: API keys stay in env vars or the git-ignored `config.json`.

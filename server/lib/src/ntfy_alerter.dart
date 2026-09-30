@@ -28,6 +28,7 @@ class NtfyAlerter implements Alerter {
     Map<String, String> env, {
     String? configPath,
     http.Client? client,
+    void Function(String message)? onError,
   }) {
     final topic = readSetting('NTFY_TOPIC', env, configPath: configPath);
     if (topic == null) return null;
@@ -37,6 +38,7 @@ class NtfyAlerter implements Alerter {
       server: server == null ? null : Uri.parse(server),
       token: readSetting('NTFY_TOKEN', env, configPath: configPath),
       client: client,
+      onError: onError,
     );
   }
 
@@ -55,11 +57,12 @@ class NtfyAlerter implements Alerter {
     tags: 'rotating_light',
   );
 
-  /// Tells the channel that [breach] is over.
-  void recovered(SlaBreach breach) => _send(
+  @override
+  void recovered(SlaBreach breach, Duration duration) => _send(
     title: 'SLA recovered: ${breach.provider} (${breach.type.name})',
     body:
-        'Back within SLA (was: ${breach.message})\n'
+        'Back within SLA after ${formatDuration(duration)} '
+        '(was: ${breach.message})\n'
         'at ${_now().toUtc().toIso8601String()}',
     priority: 'default',
     tags: 'white_check_mark',
@@ -99,8 +102,16 @@ class NtfyAlerter implements Alerter {
 }
 
 /// Console alerts, plus ntfy when `NTFY_TOPIC` is configured.
-Alerter buildAlerter(Map<String, String> env, {String? configPath}) {
-  final ntfy = NtfyAlerter.fromConfig(env, configPath: configPath);
+Alerter buildAlerter(
+  Map<String, String> env, {
+  String? configPath,
+  void Function(String message)? onError,
+}) {
+  final ntfy = NtfyAlerter.fromConfig(
+    env,
+    configPath: configPath,
+    onError: onError,
+  );
   return ntfy == null
       ? ConsoleAlerter()
       : MultiAlerter([ConsoleAlerter(), ntfy]);
@@ -116,6 +127,13 @@ class MultiAlerter implements Alerter {
   void alert(SlaBreach breach) {
     for (final a in alerters) {
       a.alert(breach);
+    }
+  }
+
+  @override
+  void recovered(SlaBreach breach, Duration duration) {
+    for (final a in alerters) {
+      a.recovered(breach, duration);
     }
   }
 }

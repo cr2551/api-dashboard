@@ -31,6 +31,26 @@ void main() {
     expect(tracker.update('stripe', const []), isEmpty);
   });
 
+  test('a resolved event says how long the breach lasted', () {
+    final t = DateTime.utc(2026, 1, 1, 12);
+    tracker.update('stripe', [breach(SlaBreachType.uptime)], at: t);
+    // Persisting cycles must not reset the opening time.
+    tracker.update('stripe', [
+      breach(SlaBreachType.uptime),
+    ], at: t.add(const Duration(minutes: 5)));
+    final events = tracker.update(
+      'stripe',
+      const [],
+      at: t.add(const Duration(minutes: 12)),
+    );
+    expect(events.single.duration, const Duration(minutes: 12));
+  });
+
+  test('opened events have no duration', () {
+    final events = tracker.update('stripe', [breach(SlaBreachType.uptime)]);
+    expect(events.single.duration, isNull);
+  });
+
   test('a breach can reopen after resolving', () {
     tracker.update('stripe', [breach(SlaBreachType.uptime)]);
     tracker.update('stripe', const []);

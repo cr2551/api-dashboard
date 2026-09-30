@@ -12,13 +12,30 @@ class ApiException implements Exception {
   String toString() => 'ApiException: $message';
 }
 
+/// The backend answered 401: a token is required or the one sent was wrong.
+class UnauthorizedException extends ApiException {
+  const UnauthorizedException({required this.hadToken})
+    : super(
+        hadToken
+            ? 'The backend rejected the access token. '
+                  'Check it and try again.'
+            : 'The backend requires an access token. Enter it to continue.',
+      );
+
+  /// Whether a token was sent with the rejected request.
+  final bool hadToken;
+}
+
 /// Talks to the monitor backend (`server/bin/serve.dart`).
 ///
 /// Override the address at build time with
-/// `--dart-define=API_BASE_URL=http://host:port`.
+/// `--dart-define=API_BASE_URL=http://host:port`. When the backend has
+/// `API_TOKEN` set, pass the same value with `--dart-define=API_TOKEN=...`
+/// (development) or enter it in the app; it is sent as a bearer token.
 class ApiClient {
-  ApiClient({String? baseUrl, http.Client? client})
+  ApiClient({String? baseUrl, String? apiToken, http.Client? client})
     : baseUrl = baseUrl ?? defaultBaseUrl,
+      _apiToken = _blankToNull(apiToken ?? defaultApiToken),
       _client = client ?? http.Client();
 
   static const defaultBaseUrl = String.fromEnvironment(
@@ -26,8 +43,21 @@ class ApiClient {
     defaultValue: 'http://localhost:8080',
   );
 
+  static const defaultApiToken = String.fromEnvironment('API_TOKEN');
+
+  static String? _blankToNull(String? value) {
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+
   final String baseUrl;
   final http.Client _client;
+
+  /// Sent as `Authorization: Bearer <token>` with every request. Kept in
+  /// memory only; it is never written to storage.
+  String? get apiToken => _apiToken;
+  set apiToken(String? value) => _apiToken = _blankToNull(value);
+  String? _apiToken;
 
   Future<StatusSnapshot> getStatus() async =>
       StatusSnapshot.fromJson(await _get('/api/status', {}));
@@ -47,9 +77,18 @@ class ApiClient {
         .replace(path: path, queryParameters: query.isEmpty ? null : query);
     final http.Response response;
     try {
-      response = await _client.get(uri).timeout(const Duration(seconds: 10));
+      final token = _apiToken;
+      response = await _client
+          .get(
+            uri,
+            headers: {if (token != null) 'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 10));
     } catch (e) {
       throw ApiException('Cannot reach the backend at $baseUrl ($e)');
+    }
+    if (response.statusCode == 401) {
+      throw UnauthorizedException(hadToken: _apiToken != null);
     }
     if (response.statusCode != 200) {
       throw ApiException('Backend returned HTTP ${response.statusCode}');

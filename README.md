@@ -1,45 +1,87 @@
-﻿# API Dashboard
+# API Dashboard
 
 A SaaS Status & SLA Breach Monitor. It actively probes external APIs from our own system (starting with payment processors like Stripe), measures latency and uptime, and alerts when a provider breaches a defined SLA threshold.
 
-## Architecture
+## Running the app
 
-- **Frontend:** Flutter (this repo's `lib/`), a dashboard for provider status, latency/uptime history, SLA definitions and alerts.
-- **Backend:** owns the core logic:
-  - **Probing:** scheduled active requests to external APIs.
-  - **Storage:** persisting probe results (latency, status, timestamps).
-  - **SLA detection:** evaluating results against configured SLA thresholds.
-  - **Alerting:** notifying when an SLA is breached.
+The app has two parts that must both be running: the **backend** (probes Stripe, stores results, serves an API) and the **Flutter dashboard** (shows the data).
 
-  The backend is written in Dart (`server/`), stores probe results in SQLite, and starts with a Stripe probe (`GET /v1/balance` with a test-mode key). Run it with `STRIPE_API_KEY=sk_test_... dart run bin/monitor.dart` from `server/` (optional: `PROBE_INTERVAL_SECONDS`, `DB_PATH`).
+### Prerequisites
 
-## Quality
+- [Flutter](https://docs.flutter.dev/get-started/install) (includes Dart)
+- A Stripe **test-mode** secret key (`sk_test_...`) from the [Stripe dashboard](https://dashboard.stripe.com/test/apikeys)
 
-- **Automated builds and unit tests:** GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs `flutter pub get`, `flutter analyze`, `flutter test` and a build on every push and pull request.
+### 1. Add your Stripe key
 
-## Development
+Create a `config.json` in the repo root (it is git-ignored, so it is never committed):
+
+```json
+{
+  "STRIPE_SECRET_KEY": "sk_test_..."
+}
+```
+
+Alternatively, set the `STRIPE_API_KEY` environment variable, which takes priority over the file.
+
+### 2. Start the backend
+
+In a terminal:
+
+```bash
+cd server
+dart pub get
+dart run bin/serve.dart
+```
+
+It probes Stripe every 30 seconds and serves the API on http://localhost:8080. Leave it running. You should see a line like `stripe ok 180ms 200` for each probe.
+
+### 3. Start the dashboard
+
+In a second terminal, from the repo root:
 
 ```bash
 flutter pub get
-flutter run
-flutter test
+flutter run -d chrome
 ```
 
-## Running the dashboard
+You can use another device instead of `chrome` (for example `windows`); run `flutter devices` to list them. The status screen refreshes every 10 seconds, and tapping a service opens its latency chart.
 
-1. Start the backend (probes Stripe and serves the API on http://localhost:8080). The key is read from `STRIPE_API_KEY` or `STRIPE_SECRET_KEY` in a git-ignored `config.json` at the repo root (use a test-mode key):
+### Troubleshooting
 
-   ```bash
-   cd server
-   dart run bin/serve.dart
-   ```
+- **"Cannot reach the backend"**: the backend isn't running, or the app is pointed at the wrong address. Start it as in step 2, then press **Retry**. To use a different address, run the app with `--dart-define=API_BASE_URL=http://host:port`.
+- **"No Stripe key"** when starting the backend: check that `config.json` is in the repo root with the `STRIPE_SECRET_KEY` field, or set `STRIPE_API_KEY`.
+- **Service shows "No data"**: no probe has been recorded in the last hour yet. Wait for the next probe.
+- **Port 8080 already in use**: start the backend with another port, for example `PORT=8081`, and run the app with a matching `API_BASE_URL`.
 
-2. In another terminal, start the Flutter app (Chrome, Windows, etc.):
+### Backend settings
 
-   ```bash
-   flutter run -d chrome
-   ```
+| Variable | Default | Purpose |
+|---|---|---|
+| `STRIPE_API_KEY` | none | Stripe key; overrides `config.json` |
+| `CONFIG_PATH` | `../config.json` | Path to the config file, relative to `server/` |
+| `PORT` | `8080` | API port |
+| `PROBE_INTERVAL_SECONDS` | `30` | Time between probes |
+| `DB_PATH` | `probes.db` | SQLite file for probe results |
 
-   Point the app at a different backend with `--dart-define=API_BASE_URL=http://host:port`.
+`bin/monitor.dart` is a console-only alternative that probes and prints alerts without serving the API.
 
-The backend also accepts `PORT`, `PROBE_INTERVAL_SECONDS` (default 30) and `DB_PATH` (default `probes.db`).
+## Architecture
+
+- **Frontend:** Flutter (`lib/`), a dashboard for provider status, latency/uptime history, SLA definitions and alerts.
+- **Backend:** Dart (`server/`), which owns the core logic:
+  - **Probing:** scheduled active requests to external APIs (starting with Stripe's `GET /v1/balance`).
+  - **Storage:** probe results (latency, status, timestamps) in SQLite.
+  - **SLA detection:** evaluating results against configured SLA thresholds.
+  - **Alerting:** notifying when an SLA is breached.
+  - **API:** JSON endpoints (`/api/status`, `/api/history`) used by the dashboard.
+
+## Development and tests
+
+```bash
+flutter test                   # Flutter tests (repo root)
+cd server && dart test         # backend tests
+```
+
+## Quality
+
+- **Automated builds and unit tests:** GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs `flutter analyze`, `flutter test` and a web build for the app, and `dart analyze` and `dart test` for the backend, on every push and pull request.

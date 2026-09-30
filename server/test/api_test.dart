@@ -40,6 +40,25 @@ void main() {
   });
   tearDown(() => store.close());
 
+  group('displayName', () {
+    test('is included when configured and null otherwise', () async {
+      handler = apiHandler(
+        store: store,
+        policies: [
+          policy,
+          const SlaPolicy(provider: 'github'),
+        ],
+        displayNames: {'github': 'GitHub'},
+        now: () => now,
+      );
+      final services = (await getJson('/api/status'))['services'] as List;
+      expect(services[0]['provider'], 'stripe');
+      expect(services[0]['displayName'], isNull);
+      expect(services[1]['provider'], 'github');
+      expect(services[1]['displayName'], 'GitHub');
+    });
+  });
+
   group('/api/status', () {
     test('is unknown when there are no probes', () async {
       final s = (await getJson('/api/status'))['services'].single;

@@ -1,0 +1,70 @@
+{
+  "services": [
+    {
+      "name": "down-5xx",
+      "displayName": "Always 503",
+      "type": "http",
+      "endpoint": "https://httpbin.org/status/503",
+      "intervalSeconds": 10,
+      "sla": { "minSamples": 2, "consecutiveFailures": 2 }
+    },
+    {
+      "name": "client-4xx",
+      "displayName": "Always 404",
+      "type": "http",
+      "endpoint": "https://httpbin.org/status/404",
+      "intervalSeconds": 10,
+      "sla": { "minSamples": 2 }
+    },
+    {
+      "name": "slow",
+      "displayName": "Slow (3s)",
+      "type": "http",
+      "endpoint": "https://httpbin.org/delay/3",
+      "intervalSeconds": 15,
+      "sla": { "maxP95LatencyMs": 1000, "minSamples": 3 }
+    },
+    {
+      "name": "times-out",
+      "displayName": "Times out",
+      "type": "http",
+      "endpoint": "https://httpbin.org/delay/5",
+      "timeoutSeconds": 2,
+      "intervalSeconds": 15,
+      "sla": { "minSamples": 2 }
+    },
+    {
+      "name": "flaky",
+      "displayName": "Flaky (1 in 3 fails)",
+      "type": "http",
+      "endpoint": "https://httpbin.org/status/200:2,503:1",
+      "intervalSeconds": 10,
+      "sla": { "minUptimePercent": 90, "minSamples": 5, "consecutiveFailures": 3 }
+    },
+    {
+      "name": "wrong-status",
+      "displayName": "Unexpected status",
+      "type": "http",
+      "endpoint": "https://httpbin.org/status/204",
+      "expectedStatus": 200,
+      "intervalSeconds": 10,
+      "sla": { "minSamples": 2 }
+    },
+    {
+      "name": "no-such-host",
+      "displayName": "DNS failure",
+      "type": "http",
+      "endpoint": "https://nonexistent-host-abc123.invalid/",
+      "intervalSeconds": 15,
+      "sla": { "minSamples": 2 }
+    },
+    {
+      "name": "bad-cert",
+      "displayName": "Expired certificate",
+      "type": "http",
+      "endpoint": "https://expired.badssl.com/",
+      "intervalSeconds": 15,
+      "sla": { "minSamples": 2 }
+    }
+  ]
+}

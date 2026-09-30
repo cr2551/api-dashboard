@@ -2,6 +2,7 @@
   "services": [
     {
       "name": "stripe",
+      "displayName": "Stripe",
       "type": "stripe",
       "intervalSeconds": 30,
       "timeoutSeconds": 10,
@@ -15,6 +16,7 @@
     },
     {
       "name": "github",
+      "displayName": "GitHub",
       "type": "http",
       "endpoint": "https://api.github.com/rate_limit",
       "intervalSeconds": 60,
@@ -27,6 +29,7 @@
     },
     {
       "name": "frankfurter",
+      "displayName": "Frankfurter",
       "type": "http",
       "endpoint": "https://api.frankfurter.dev/v1/latest",
       "intervalSeconds": 60,
@@ -39,6 +42,7 @@
     },
     {
       "name": "httpbin",
+      "displayName": "httpbin",
       "type": "http",
       "endpoint": "https://httpbin.org/status/200",
       "intervalSeconds": 60,

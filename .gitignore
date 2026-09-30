@@ -49,3 +49,6 @@ app.*.map.json
 
 # secrets
 config.json
+# Local services list (copy of services.example.json); not shared
+services.json
+services.chaos.json

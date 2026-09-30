@@ -17,9 +17,16 @@ String stateLabel(ServiceState state) => switch (state) {
   ServiceState.unknown => 'No data',
 };
 
-String providerLabel(String provider) => provider.isEmpty
-    ? provider
-    : provider[0].toUpperCase() + provider.substring(1);
+/// Title for a service: the configured [displayName] when there is one,
+/// otherwise the provider key with its first letter capitalised.
+String providerLabel(String provider, {String? displayName}) {
+  if (displayName != null && displayName.trim().isNotEmpty) {
+    return displayName;
+  }
+  return provider.isEmpty
+      ? provider
+      : provider[0].toUpperCase() + provider.substring(1);
+}
 
 String formatPercent(double? value) =>
     value == null ? '—' : '${value.toStringAsFixed(value == 100 ? 0 : 2)}%';
@@ -64,7 +71,10 @@ class ServiceCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      providerLabel(service.provider),
+                      providerLabel(
+                        service.provider,
+                        displayName: service.displayName,
+                      ),
                       style: theme.textTheme.titleLarge,
                     ),
                   ),

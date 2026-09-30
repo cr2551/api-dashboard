@@ -16,7 +16,8 @@ const _cors = {
 /// JSON API for the dashboard:
 ///
 /// * `GET /api/status`: one entry per policy (state, latest probe, uptime,
-///   latency stats and current SLA breaches over the policy window).
+///   latency stats and current SLA breaches over the policy window, plus the
+///   optional friendly `displayName` from [displayNames]).
 /// * `GET /api/history?provider=stripe&minutes=60`: probes for the chart.
 ///
 /// When [authToken] is set, every request except the CORS preflight must send
@@ -26,6 +27,7 @@ Handler apiHandler({
   required ProbeStore store,
   required List<SlaPolicy> policies,
   String? authToken,
+  Map<String, String> displayNames = const {},
   DateTime Function()? now,
 }) {
   final clock = now ?? DateTime.now;
@@ -48,6 +50,7 @@ Handler apiHandler({
     final last = results.isEmpty ? null : results.last;
     return {
       'provider': policy.provider,
+      'displayName': displayNames[policy.provider],
       'state': last == null ? 'unknown' : (last.success ? 'up' : 'down'),
       'lastProbe': last == null ? null : _probeJson(last),
       'windowMinutes': policy.window.inMinutes,

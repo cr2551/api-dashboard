@@ -55,6 +55,11 @@ Future<void> main() async {
     apiHandler(
       store: store,
       policies: [for (final s in services) s.policy],
+      displayNames: {
+        for (final s in services)
+          if (s.config.displayName != null)
+            s.config.name: s.config.displayName!,
+      },
       authToken: authToken,
     ),
     InternetAddress.loopbackIPv4,

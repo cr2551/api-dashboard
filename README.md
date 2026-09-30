@@ -191,6 +191,7 @@ These are third-party sites: keep intervals at 60 s or more to be polite, and ex
 | Field | Required | Default | Meaning |
 |---|---|---|---|
 | `name` | yes | | Unique service name, used in the API, alerts and logs. |
+| `displayName` | no | `name` capitalised | Friendly title on the dashboard, up to 40 characters (for example `GitHub`). `name` stays the key in the API, alerts and logs. |
 | `type` | yes | | Probe type: `stripe` or `http`. |
 | `endpoint` | `http`: yes | the probe's own | The probed http(s) URL. |
 | `expectedStatus` | no | any 2xx | Exact status that counts as success (`http` only), 100 to 599. |
@@ -203,6 +204,34 @@ These are third-party sites: keep intervals at 60 s or more to be polite, and ex
 | `sla.consecutiveFailures` | no | 1 | A breach must hold this many evaluations in a row before alerting. |
 
 `loadServicesConfig(path)` validates the file. Unknown fields are rejected so a typo cannot silently fall back to a default, and errors name the exact field, e.g. `Invalid config at services[1].sla.minUptimePercent: must be a number between 0 and 100`.
+## Breaking things on purpose
+
+[services.chaos.example.json](services.chaos.example.json) monitors eight endpoints that each fail in a different way, so you can see every part of the system react (dashboard states, SLA breach banners, alerts, error categories in the log). It uses public test services (`httpbin.org`, `badssl.com`, and a reserved `.invalid` hostname), so keep it running for minutes, not days.
+
+Run it on its own port and database so it does not mix with your real history (PowerShell, from `server/`):
+
+```powershell
+$env:SERVICES_CONFIG = "../services.chaos.example.json"
+$env:DB_PATH = "chaos.db"
+$env:PORT = "8081"
+dart run bin/serve.dart
+```
+
+then point the app at it: `flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:8081`.
+
+| Service | How it fails | What to expect |
+|---|---|---|
+| Always 503 | `httpbin.org/status/503` | Down; uptime breach; one alert after 2 failures; error `http5xx` |
+| Always 404 | `httpbin.org/status/404` | Down; error `http4xx` |
+| Slow (3s) | `httpbin.org/delay/3` | Still up, but a **latency** breach (p95 over 1000 ms) |
+| Times out | `/delay/5` with a 2 s timeout | Error `timeout`; probes are retried once, so each takes about 4 s |
+| Flaky (1 in 3 fails) | `/status/200:2,503:1` | Uptime wobbles; debounce (3 in a row) decides whether it alerts |
+| Unexpected status | `/status/204` with `expectedStatus: 200` | Fails although the server is healthy |
+| DNS failure | a `.invalid` hostname | Error `connection` |
+| Expired certificate | `expired.badssl.com` | Error `tls` |
+
+The error category appears in the server log (`FAIL ... http5xx: HTTP 503`); the dashboard shows the state and breaches. Nothing in this file ever recovers, so to see a **recovery** message use `dart run bin/drill.dart` (see [Testing the alert pipeline](#testing-the-alert-pipeline)), or give a flaky service a short `windowMinutes`. Set `NTFY_TOPIC` first to get the alerts on your phone.
+
 ## API authentication
 
 Set `API_TOKEN` (env var, else the git-ignored `config.json`) and every API request must send `Authorization: Bearer <token>`; anything else gets `401 {"error":"unauthorized"}`. The CORS preflight (`OPTIONS`) stays open, since browsers send it without credentials, and 401 responses still carry CORS headers so the dashboard can read them.

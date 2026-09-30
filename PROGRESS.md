@@ -50,7 +50,7 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 
 | Task | Status | Issue |
 |---|---|---|
-| Define SLA thresholds (p95 latency, uptime %) | ✅ | `SlaPolicy`; hardcoded defaults until [#26](https://github.com/cr2551/api-dashboard/issues/26)/[#29](https://github.com/cr2551/api-dashboard/issues/29) |
+| Define SLA thresholds (p95 latency, uptime %) | ✅ | `SlaPolicy`; defaults when omitted, overridable per service ([#29](https://github.com/cr2551/api-dashboard/issues/29)) |
 | Rolling-window calculation | ✅ | [#5](https://github.com/cr2551/api-dashboard/issues/5), [#8](https://github.com/cr2551/api-dashboard/issues/8) |
 | Breach detection with debounce / consecutive-failure rule | ✅ | `SlaPolicy.consecutiveFailures` (default 1, off): [#19](https://github.com/cr2551/api-dashboard/issues/19), [PR #37](https://github.com/cr2551/api-dashboard/pull/37) |
 | State tracking to avoid duplicate alerts | ✅ | `BreachTracker` (in memory): [#20](https://github.com/cr2551/api-dashboard/issues/20), [PR #37](https://github.com/cr2551/api-dashboard/pull/37) |
@@ -69,9 +69,9 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 
 | Task | Status | Issue |
 |---|---|---|
-| Add second and third API | ⬜ | [#27](https://github.com/cr2551/api-dashboard/issues/27) |
-| Make thresholds configurable per service | ⬜ | [#29](https://github.com/cr2551/api-dashboard/issues/29) |
-| Config file (YAML/JSON) for services | 🟡 | Schema, validating loader and `services.example.json` done ([#26](https://github.com/cr2551/api-dashboard/issues/26)); `serve.dart` does not read it yet: [#28](https://github.com/cr2551/api-dashboard/issues/28) |
+| Add second and third API | ✅ | Generic `HttpProbe` (`type: "http"`) with GitHub, Frankfurter and httpbin in the example config: [#27](https://github.com/cr2551/api-dashboard/issues/27) |
+| Make thresholds configurable per service | ✅ | p95, uptime, window, min samples and debounce per service: [#29](https://github.com/cr2551/api-dashboard/issues/29) |
+| Config file (YAML/JSON) for services | ✅ | Schema, validating loader, `services.example.json` ([#26](https://github.com/cr2551/api-dashboard/issues/26)); `serve.dart` and `monitor.dart` run one monitor per service ([#28](https://github.com/cr2551/api-dashboard/issues/28)) |
 
 ## Phase 7: Flutter dashboard
 
@@ -96,7 +96,6 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 
 | Component | Issues |
 |---|---|
-| backend / coverage | [#27](https://github.com/cr2551/api-dashboard/issues/27) more API probes |
 | infra | [#32](https://github.com/cr2551/api-dashboard/issues/32) deploy the backend |
 
 Tasks in the same area can touch the same files (for example anything that changes `Monitor`), so tell each other before starting.
@@ -105,8 +104,6 @@ Tasks in the same area can touch the same files (for example anything that chang
 
 | Issue | Waits for |
 |---|---|
-| [#28](https://github.com/cr2551/api-dashboard/issues/28) multi-service serve.dart | #26 (done), #27 to be useful |
-| [#29](https://github.com/cr2551/api-dashboard/issues/29) per-service thresholds | #26 |
 | [#34](https://github.com/cr2551/api-dashboard/issues/34) case studies | #32 (and a real breach to write about) |
 
 ### Dependency chains
@@ -115,8 +112,6 @@ Tasks in the same area can touch the same files (for example anything that chang
 #21 channel ──> #22 send ──┬──> #23 wire ──┐
 #20 tracker ───────────────┤               ├──> #25 pipeline test
                            └──> #24 recovery┘
-#26 config ──┬──> #28 multi-service
-             └──> #29 per-service thresholds
 #30 api auth ──┬──> #31 app credentials
                └──> #32 deploy ──> #34 case studies (also needs #23)
 ```

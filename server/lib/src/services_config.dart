@@ -16,7 +16,12 @@ class ConfigException implements Exception {
 }
 
 /// Probe types the backend knows how to run.
-const supportedServiceTypes = {'stripe'};
+///
+/// * `stripe`: Stripe's authenticated `GET /v1/balance` (key from env or
+///   `config.json`).
+/// * `http`: a plain `GET` of any public [ServiceConfig.endpoint], judged by
+///   its status code.
+const supportedServiceTypes = {'stripe', 'http'};
 
 /// One monitored service: what to probe, how often, and its SLA.
 ///
@@ -30,13 +35,18 @@ class ServiceConfig {
     required this.timeout,
     required this.policy,
     this.endpoint,
+    this.expectedStatus,
   });
 
   final String name;
   final String type;
 
-  /// Overrides the probe's default endpoint when set.
+  /// Required for type `http`; overrides the default for other types.
   final Uri? endpoint;
+
+  /// Exact status that counts as success (type `http` only); null means any
+  /// 2xx.
+  final int? expectedStatus;
   final Duration interval;
   final Duration timeout;
   final SlaPolicy policy;
@@ -93,6 +103,7 @@ ServiceConfig _parseService(Object? json, String at) {
     'name',
     'type',
     'endpoint',
+    'expectedStatus',
     'intervalSeconds',
     'timeoutSeconds',
     'sla',
@@ -116,6 +127,26 @@ ServiceConfig _parseService(Object? json, String at) {
         endpoint.host.isEmpty) {
       throw ConfigException('$at.endpoint', 'must be an http(s) URL');
     }
+  } else if (type == 'http') {
+    throw ConfigException('$at.endpoint', 'required for type "http"');
+  }
+
+  int? expectedStatus;
+  if (map.containsKey('expectedStatus')) {
+    if (type != 'http') {
+      throw ConfigException(
+        '$at.expectedStatus',
+        'only supported for type "http"',
+      );
+    }
+    final value = map['expectedStatus'];
+    if (value is! int || value < 100 || value > 599) {
+      throw ConfigException(
+        '$at.expectedStatus',
+        'must be an HTTP status code between 100 and 599',
+      );
+    }
+    expectedStatus = value;
   }
 
   final interval = _positiveInt(map, 'intervalSeconds', at, fallback: 60);
@@ -125,6 +156,7 @@ ServiceConfig _parseService(Object? json, String at) {
     name: name,
     type: type,
     endpoint: endpoint,
+    expectedStatus: expectedStatus,
     interval: Duration(seconds: interval),
     timeout: Duration(seconds: timeout),
     policy: _parsePolicy(name, map['sla'], '$at.sla'),

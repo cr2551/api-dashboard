@@ -80,8 +80,8 @@ Without state, a 2-hour outage probed every 30 seconds would send 240 alerts. `B
 Storage, evaluation and alert-sending errors are logged and the cycle carries on. A broken notification channel (for example ntfy being down) cannot stop probing or the dashboard.
 
 ### Known limitations
-- `serve.dart` currently runs a single Stripe service with the **default policy** (60 minutes, p95 under 1 s, 99.9% uptime, no debounce). The per-service settings in `services.json` are validated but not used yet: [#28](https://github.com/cr2551/api-dashboard/issues/28), [#29](https://github.com/cr2551/api-dashboard/issues/29).
-- Only one probe type (Stripe) exists so far: [#27](https://github.com/cr2551/api-dashboard/issues/27).
+- **Without a `services.json`** the server monitors Stripe only, with the **default policy** (60 minutes, p95 under 1 s, 99.9% uptime, no debounce), which is twitchy: one failed probe in ~120 already breaches. Copy [services.example.json](services.example.json) to `services.json` to tune thresholds per service.
+- Probes are plain `GET`s judged by status code. There is no request body, POST, or response-content check yet, and only Stripe has authentication built in.
 - Breach state is not persisted across restarts (see above).
 
 ## Quality
@@ -145,7 +145,7 @@ Both `bin/serve.dart` and `bin/monitor.dart` write timestamped lines (`2026-01-0
 
 ## Services config
 
-[services.example.json](services.example.json) describes what to monitor. Copy it to `services.json` and edit it. **It never contains secrets**: API keys stay in env vars or the git-ignored `config.json`.
+[services.example.json](services.example.json) describes what to monitor. Copy it to `services.json` (next to `config.json`, at the repo root) and edit it, or point `SERVICES_CONFIG` at another path. `serve.dart` and `monitor.dart` run **one monitor per service**, each with its own interval, timeout and SLA thresholds, and `/api/status` lists all of them. **The file never contains secrets**: API keys stay in env vars or the git-ignored `config.json`.
 
 ```json
 {
@@ -155,16 +155,45 @@ Both `bin/serve.dart` and `bin/monitor.dart` write timestamped lines (`2026-01-0
       "type": "stripe",
       "intervalSeconds": 30,
       "sla": { "maxP95LatencyMs": 1000, "minUptimePercent": 99.9, "consecutiveFailures": 2 }
+    },
+    {
+      "name": "github",
+      "type": "http",
+      "endpoint": "https://api.github.com/rate_limit",
+      "intervalSeconds": 60,
+      "sla": { "minUptimePercent": 99, "minSamples": 5 }
     }
   ]
 }
 ```
 
+Without a services file (and without `SERVICES_CONFIG`) the server falls back to Stripe only with default thresholds, as before. A `SERVICES_CONFIG` that points at a missing file, or an invalid file, stops the server at startup with a message naming the problem.
+
+### Probe types
+
+| `type` | What it does | Needs |
+|---|---|---|
+| `stripe` | Authenticated `GET /v1/balance` (read-only). | `STRIPE_API_KEY` or `STRIPE_SECRET_KEY` in `config.json` (test-mode key) |
+| `http` | Plain `GET` of `endpoint`. Success is any 2xx, or exactly `expectedStatus` when set. | `endpoint`; no key |
+
+The example file monitors three keyless public APIs alongside Stripe, chosen because they are free, read-only and need no signup:
+
+| Service | Endpoint | Why |
+|---|---|---|
+| `github` | `https://api.github.com/rate_limit` | A widely used real API. This endpoint does not use up the 60 requests/hour unauthenticated quota. |
+| `frankfurter` | `https://api.frankfurter.dev/v1/latest` | Free exchange-rate API, finance-flavoured like Stripe. (The old `api.frankfurter.app` now redirects here.) |
+| `httpbin` | `https://httpbin.org/status/200` | A public test server. Change the path to `/status/503` or `/delay/5` to provoke a breach on purpose. It is sometimes flaky, so it has relaxed thresholds. |
+
+These are third-party sites: keep intervals at 60 s or more to be polite, and expect the occasional false breach that is their outage, not yours.
+
+### Fields
+
 | Field | Required | Default | Meaning |
 |---|---|---|---|
 | `name` | yes | | Unique service name, used in the API, alerts and logs. |
-| `type` | yes | | Probe type. Supported: `stripe`. |
-| `endpoint` | no | the probe's own | Overrides the probed http(s) URL. |
+| `type` | yes | | Probe type: `stripe` or `http`. |
+| `endpoint` | `http`: yes | the probe's own | The probed http(s) URL. |
+| `expectedStatus` | no | any 2xx | Exact status that counts as success (`http` only), 100 to 599. |
 | `intervalSeconds` | no | 60 | Seconds between probes. |
 | `timeoutSeconds` | no | 10 | Per-request timeout. |
 | `sla.maxP95LatencyMs` | no | 1000 | p95 latency limit. |
@@ -173,8 +202,7 @@ Both `bin/serve.dart` and `bin/monitor.dart` write timestamped lines (`2026-01-0
 | `sla.minSamples` | no | 1 | Fewer probes than this in the window are not judged. |
 | `sla.consecutiveFailures` | no | 1 | A breach must hold this many evaluations in a row before alerting. |
 
-`loadServicesConfig(path)` validates the file. Unknown fields are rejected so a typo cannot silently fall back to a default, and errors name the exact field, e.g. `Invalid config at services[1].sla.minUptimePercent: must be a number between 0 and 100`. `serve.dart` does not read this file yet; that is [#28](https://github.com/cr2551/api-dashboard/issues/28).
-
+`loadServicesConfig(path)` validates the file. Unknown fields are rejected so a typo cannot silently fall back to a default, and errors name the exact field, e.g. `Invalid config at services[1].sla.minUptimePercent: must be a number between 0 and 100`.
 ## API authentication
 
 Set `API_TOKEN` (env var, else the git-ignored `config.json`) and every API request must send `Authorization: Bearer <token>`; anything else gets `401 {"error":"unauthorized"}`. The CORS preflight (`OPTIONS`) stays open, since browsers send it without credentials, and 401 responses still carry CORS headers so the dashboard can read them.

@@ -247,6 +247,67 @@ void main() {
     });
   });
 
+  group('type http', () {
+    Map<String, Object?> http([Map<String, Object?> extra = const {}]) =>
+        service({
+          'name': 'gh',
+          'type': 'http',
+          'endpoint': 'https://api.github.com/rate_limit',
+          ...extra,
+        });
+
+    test('reads the endpoint and expectedStatus', () {
+      final s = parse([
+        http({'expectedStatus': 204}),
+      ]).single;
+      expect(s.type, 'http');
+      expect(s.endpoint, Uri.parse('https://api.github.com/rate_limit'));
+      expect(s.expectedStatus, 204);
+    });
+
+    test('expectedStatus defaults to any 2xx (null)', () {
+      expect(parse([http()]).single.expectedStatus, isNull);
+    });
+
+    test('the endpoint is required', () {
+      expectBadField(
+        {
+          'services': [
+            {'name': 'gh', 'type': 'http'},
+          ],
+        },
+        'services[0].endpoint',
+        'required',
+      );
+    });
+
+    test('expectedStatus must be a status code', () {
+      for (final bad in [99, 600, '200', 200.5]) {
+        expectBadField(
+          {
+            'services': [
+              http({'expectedStatus': bad}),
+            ],
+          },
+          'services[0].expectedStatus',
+          'between 100 and 599',
+        );
+      }
+    });
+
+    test('expectedStatus is only for type http', () {
+      expectBadField(
+        {
+          'services': [
+            service({'expectedStatus': 200}),
+          ],
+        },
+        'services[0].expectedStatus',
+        'only supported',
+      );
+    });
+  });
+
   group('loadServicesConfig', () {
     late Directory dir;
     setUp(() => dir = Directory.systemTemp.createTempSync('services_test'));
@@ -280,9 +341,18 @@ void main() {
     });
 
     test('the committed services.example.json is valid', () {
-      final s = loadServicesConfig('../services.example.json').single;
-      expect(s.name, 'stripe');
-      expect(s.policy.consecutiveFailures, 2);
+      final list = loadServicesConfig('../services.example.json');
+      expect(list.map((s) => s.name), [
+        'stripe',
+        'github',
+        'frankfurter',
+        'httpbin',
+      ]);
+      expect(list.map((s) => s.type), ['stripe', 'http', 'http', 'http']);
+      expect(list.first.policy.consecutiveFailures, 2);
+      // Each service has its own thresholds.
+      expect(list.map((s) => s.policy.minUptimePercent).toSet().length, 3);
+      expect(list.every((s) => s.type != 'http' || s.endpoint != null), isTrue);
     });
   });
 }

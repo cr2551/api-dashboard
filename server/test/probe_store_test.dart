@@ -107,4 +107,90 @@ void main() {
   test('empty store returns no rows', () {
     expect(store.query('stripe', since: t0), isEmpty);
   });
+
+  group('latest', () {
+    void insertN(int n, {String provider = 'stripe'}) {
+      for (var i = 0; i < n; i++) {
+        store.insert(result(t0.add(Duration(minutes: i)), provider: provider));
+      }
+    }
+
+    test('empty store returns no rows', () {
+      expect(store.latest('stripe', 5), isEmpty);
+    });
+
+    test('fewer rows than the limit returns them all, newest first', () {
+      insertN(3);
+      final rows = store.latest('stripe', 10);
+      expect(rows.map((r) => r.timestamp), [
+        t0.add(const Duration(minutes: 2)),
+        t0.add(const Duration(minutes: 1)),
+        t0,
+      ]);
+    });
+
+    test('more rows than the limit returns only the newest N', () {
+      insertN(10);
+      final rows = store.latest('stripe', 3);
+      expect(rows.map((r) => r.timestamp), [
+        t0.add(const Duration(minutes: 9)),
+        t0.add(const Duration(minutes: 8)),
+        t0.add(const Duration(minutes: 7)),
+      ]);
+    });
+
+    test('exactly N rows returns all of them', () {
+      insertN(4);
+      expect(store.latest('stripe', 4), hasLength(4));
+    });
+
+    test('only returns the requested provider', () {
+      insertN(3);
+      insertN(5, provider: 'other');
+      expect(store.latest('stripe', 10), hasLength(3));
+      expect(store.latest('other', 2), hasLength(2));
+      expect(store.latest('unknown', 10), isEmpty);
+    });
+
+    test('orders by time, not insertion order', () {
+      store
+        ..insert(result(t0.add(const Duration(minutes: 5))))
+        ..insert(result(t0))
+        ..insert(result(t0.add(const Duration(minutes: 2))));
+      expect(store.latest('stripe', 2).map((r) => r.timestamp), [
+        t0.add(const Duration(minutes: 5)),
+        t0.add(const Duration(minutes: 2)),
+      ]);
+    });
+
+    test('same timestamp: the last inserted comes first', () {
+      store
+        ..insert(result(t0, status: 200))
+        ..insert(result(t0, ok: false, status: 500));
+      expect(store.latest('stripe', 2).map((r) => r.statusCode), [500, 200]);
+    });
+
+    test('keeps every field, including the error category', () {
+      store.insert(
+        result(
+          t0,
+          ok: false,
+          status: 503,
+          error: 'HTTP 503',
+          kind: ProbeErrorKind.http5xx,
+        ),
+      );
+      final r = store.latest('stripe', 1).single;
+      expect(r.success, isFalse);
+      expect(r.statusCode, 503);
+      expect(r.error, 'HTTP 503');
+      expect(r.errorKind, ProbeErrorKind.http5xx);
+    });
+
+    test('limit 0 is empty and a negative limit is rejected', () {
+      insertN(2);
+      expect(store.latest('stripe', 0), isEmpty);
+      expect(() => store.latest('stripe', -1), throwsArgumentError);
+    });
+  });
 }

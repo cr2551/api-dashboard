@@ -35,7 +35,7 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 | Design schema (service, timestamp, latency_ms, status_code, success, error_message) | ✅ | `probe_results` table; the column is `provider` rather than `service` |
 | Set up SQLite | ✅ | [#7](https://github.com/cr2551/api-dashboard/issues/7) |
 | Insert logic for each probe run | ✅ | `ProbeStore.insert` |
-| Basic query layer (last N results per service) | 🟡 | Only a time-window query exists. Missing "last N": [#35](https://github.com/cr2551/api-dashboard/issues/35) |
+| Basic query layer (last N results per service) | ✅ | `query` (time window) and `latest(provider, limit)` (newest first): [#35](https://github.com/cr2551/api-dashboard/issues/35) |
 
 ## Phase 3: Scheduling
 
@@ -96,7 +96,6 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 
 | Component | Issues |
 |---|---|
-| backend / storage | [#35](https://github.com/cr2551/api-dashboard/issues/35) last-N query |
 | backend / coverage | [#27](https://github.com/cr2551/api-dashboard/issues/27) more API probes |
 | backend / security | [#30](https://github.com/cr2551/api-dashboard/issues/30) API auth |
 

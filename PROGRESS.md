@@ -81,14 +81,14 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 | Uptime % and latency trend chart | ✅ | [#15](https://github.com/cr2551/api-dashboard/issues/15) |
 | Connect Flutter app to backend API | ✅ | [#11](https://github.com/cr2551/api-dashboard/issues/11), [#12](https://github.com/cr2551/api-dashboard/issues/12), [#13](https://github.com/cr2551/api-dashboard/issues/13) |
 | Basic auth if backend is exposed publicly | ✅ | Backend bearer token (`API_TOKEN`): [#30](https://github.com/cr2551/api-dashboard/issues/30). App sends it, with a token prompt on 401: [#31](https://github.com/cr2551/api-dashboard/issues/31) |
-| Deploy backend somewhere persistent | 🟡 | Docker Compose + Caddy (HTTPS), token required, SQLite in a volume, `restart: always`; steps in [deploy/README.md](deploy/README.md). Verified end to end on a local Docker host; still needs running on the chosen server (Google Cloud `e2-micro`) and `deploy/check.sh` passing against it: [#32](https://github.com/cr2551/api-dashboard/issues/32) |
+| Deploy backend somewhere persistent | ✅ | Docker Compose + Caddy (automatic HTTPS), `API_TOKEN` required (the server refuses to listen on the network without it), SQLite in a Docker volume, `restart: always` with Docker enabled at boot; steps in [deploy/README.md](deploy/README.md): [#32](https://github.com/cr2551/api-dashboard/issues/32), [PR #55](https://github.com/cr2551/api-dashboard/pull/55) |
 
 ## Phase 8: Documentation
 
 | Task | Status | Issue |
 |---|---|---|
 | Document architecture and SLA/debounce design decisions | ✅ | README "Pipeline" and "Design decisions" sections: [#33](https://github.com/cr2551/api-dashboard/issues/33) |
-| Document real breaches as case studies | ⬜ | [#34](https://github.com/cr2551/api-dashboard/issues/34) |
+| Document real breaches as case studies | ⬜ | Unblocked: the monitor now runs continuously (#32) and alerts on breaches (#23): [#34](https://github.com/cr2551/api-dashboard/issues/34) |
 
 ## Who can work on what
 
@@ -96,15 +96,15 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 
 | Component | Issues |
 |---|---|
-| infra | [#32](https://github.com/cr2551/api-dashboard/issues/32) deploy the backend |
+| docs | [#34](https://github.com/cr2551/api-dashboard/issues/34) case studies: write up any breach the deployed monitor catches (what happened, what the dashboard showed, how fast it alerted), or add a note that none has happened yet. Best done after it has run for a while. |
+| backend | Follow-up to [#25](https://github.com/cr2551/api-dashboard/issues/25): one live ntfy push. Run `dart run bin/drill.dart` with `NTFY_TOPIC` set and confirm the alert and the recovery arrive on a phone, then put the same topic in `deploy/.env` so the deployed monitor alerts too. |
+| frontend | [#2](https://github.com/cr2551/api-dashboard/issues/2) leftover: branch `feat/dashboard-gui` has two unmerged commits (an actionable "cannot reach the backend" error in `lib/data/api_client.dart`, and step-by-step run instructions in the README). It is far behind `main`, so redo or rebase them, then close #2. |
 
 Tasks in the same area can touch the same files (for example anything that changes `Monitor`), so tell each other before starting.
 
 ### Blocked until others are done
 
-| Issue | Waits for |
-|---|---|
-| [#34](https://github.com/cr2551/api-dashboard/issues/34) case studies | #32 (and a real breach to write about) |
+Nothing is blocked: every dependency of the open tasks is done.
 
 ### Dependency chains
 
@@ -115,6 +115,8 @@ Tasks in the same area can touch the same files (for example anything that chang
 #30 api auth ──┬──> #31 app credentials
                └──> #32 deploy ──> #34 case studies (also needs #23)
 ```
+
+Everything in these chains is done except #34, which no longer waits for anything.
 
 ## Earlier completed work
 

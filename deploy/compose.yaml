@@ -1,0 +1,53 @@
+# Production stack: the monitor behind Caddy, which gets and renews the HTTPS
+# certificate. Run from this folder: `docker compose up -d --build`.
+# Steps and rationale: README.md in this folder.
+name: sla-monitor
+
+services:
+  monitor:
+    build: ../server
+    image: sla-monitor
+    # Comes back after a crash and when Docker starts at boot.
+    restart: always
+    # Secrets (API_TOKEN, STRIPE_API_KEY, NTFY_*) live only in .env.
+    env_file: .env
+    environment:
+      SERVICES_CONFIG: /config/services.json
+    volumes:
+      # The SQLite file survives restarts, rebuilds and reboots.
+      - monitor-data:/data
+      - ./services.json:/config/services.json:ro
+    # No `ports:`: only Caddy reaches the API, so plain HTTP never leaves the
+    # host.
+    expose:
+      - "8080"
+    stop_grace_period: 15s
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  caddy:
+    image: caddy:2
+    restart: always
+    depends_on:
+      - monitor
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    # Only the hostname; Caddy never sees the API token.
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates and the ACME account, so restarts do not re-request them.
+      - caddy-data:/data
+      - caddy-config:/config
+    logging: *logging
+
+volumes:
+  monitor-data:
+  caddy-data:
+  caddy-config:

@@ -33,5 +33,6 @@ A SaaS Status & SLA Breach Monitor. It actively probes external APIs from our ow
 - Keep probing/SLA logic out of widgets so it stays unit-testable.
 - Backend commands run from `server/`: `dart pub get`, `dart analyze`, `dart test`.
 - Run the whole app: `dart run bin/serve.dart` in `server/`, then `flutter run -d chrome` (see README).
+- Deployment lives in `deploy/` (Docker Compose + Caddy, see deploy/README.md); `server/Dockerfile` must keep building. Never commit `deploy/.env` or real tokens: the repo is public.
 - Flutter code: `lib/data` (models + ApiClient), `lib/screens`, `lib/widgets`. Tests mirror this under `test/`.
 - Keep `PROGRESS.md` up to date: when a task finishes, change its status and link the issue/PR in the same change. Tasks live in GitHub issues (milestone = phase, `component:*` labels, `independent` / `has-dependencies`).

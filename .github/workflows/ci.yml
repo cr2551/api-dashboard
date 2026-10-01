@@ -30,3 +30,15 @@ jobs:
       - run: dart pub get
       - run: dart analyze
       - run: dart test
+
+  # The image deploy/compose.yaml runs (see deploy/README.md).
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --tag sla-monitor server
+      - name: Refuses to listen on the network without a token
+        run: |
+          set +e
+          docker run --rm sla-monitor
+          test $? -eq 64

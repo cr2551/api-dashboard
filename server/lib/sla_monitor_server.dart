@@ -13,5 +13,6 @@ export 'src/ntfy_alerter.dart';
 export 'src/monitor.dart';
 export 'src/api.dart';
 export 'src/config.dart';
+export 'src/listen.dart';
 export 'src/services_config.dart';
 export 'src/services.dart';

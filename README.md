@@ -115,7 +115,7 @@ flutter test
 
    If the backend has `API_TOKEN` set, the app shows an **Enter access token** button on the 401 error (and a key icon in the app bar to change it later). For development you can instead pass `--dart-define=API_TOKEN=<token>`. The token is kept in memory only, so the app asks again after a restart.
 
-The backend also accepts `PORT`, `PROBE_INTERVAL_SECONDS` (default 30) and `DB_PATH` (default `probes.db`).
+The backend also accepts `PORT`, `HOST` (default `127.0.0.1`), `PROBE_INTERVAL_SECONDS` (default 30) and `DB_PATH` (default `probes.db`).
 ## Alert channel: ntfy.sh
 
 **Decision:** alerts go to [ntfy.sh](https://ntfy.sh) (console output stays on too).
@@ -246,7 +246,7 @@ The server saves every breach that **opens** or **resolves** to SQLite (the `bre
 | Android | `flutter_local_notifications` on a high-importance "SLA alerts" channel. Android 13+ shows a permission prompt. |
 | Windows, iOS, macOS, Linux | Not set up: the switch is disabled with an explanation, and the bell and snackbars still work. |
 
-**What it does not do (yet):** these notifications come from the app polling, so they only appear **while the app or browser tab is running**. Nothing reaches you once it is closed or the phone has put it to sleep; for that, use the ntfy alerts above, which the server sends itself. Alerts that happened while the app was closed are listed (and counted) the next time you open it, and the first time you ever open the app the existing history loads silently instead of notifying you about old alerts. True background push (web push or Firebase) needs a deployed HTTPS backend ([#32](https://github.com/cr2551/api-dashboard/issues/32)).
+**What it does not do (yet):** these notifications come from the app polling, so they only appear **while the app or browser tab is running**. Nothing reaches you once it is closed or the phone has put it to sleep; for that, use the ntfy alerts above, which the server sends itself. Alerts that happened while the app was closed are listed (and counted) the next time you open it, and the first time you ever open the app the existing history loads silently instead of notifying you about old alerts. True background push (web push or Firebase) needs a deployed HTTPS backend (see [Deployment](#deployment)).
 
 **Android:** the manifest requests `INTERNET` (needed by release builds) and `POST_NOTIFICATIONS`, and the build enables core-library desugaring, which the notification plugin requires. A release build must talk to an HTTPS backend; plain `http://` is blocked by Android. The app token and the notification settings are kept separate: the token is memory-only, while the on/off choice and the last alert seen are stored with `shared_preferences`.
 
@@ -265,4 +265,16 @@ API_TOKEN=$(openssl rand -hex 32) dart run bin/serve.dart
 curl -H "Authorization: Bearer <token>" http://localhost:8080/api/status
 ```
 
-Without `API_TOKEN` the API is open and `serve.dart` logs a warning. That is only acceptable because it listens on localhost; set a token before exposing it (see [#32](https://github.com/cr2551/api-dashboard/issues/32)), and use HTTPS, because a bearer token is readable on plain HTTP.
+Without `API_TOKEN` the API is open and `serve.dart` logs a warning. That is only acceptable because it listens on localhost by default. `HOST` changes the listen address (for example `0.0.0.0` in a container), and the server refuses to start on any non-loopback address without a token. Use HTTPS when it is exposed, because a bearer token is readable on plain HTTP; the deployment below does both.
+
+## Deployment
+
+[deploy/README.md](deploy/README.md) runs the backend on an always-on server (a free Google Cloud `e2-micro` VM, any VPS, or a Raspberry Pi) with Docker Compose: the monitor behind [Caddy](https://caddyserver.com) for automatic HTTPS, `API_TOKEN` required and kept in a git-ignored `deploy/.env`, the SQLite file in a persistent volume, and both containers restarting after a crash or a reboot. In short, on the server:
+
+```bash
+git clone https://github.com/cr2551/api-dashboard.git && cd api-dashboard
+cp services.example.json deploy/services.json   # edit; drop "stripe" without a key
+sh deploy/setup.sh monitor.example.com          # your domain, pointing at the server
+```
+
+then from your machine `sh deploy/check.sh monitor.example.com`, and run the app with `--dart-define=API_BASE_URL=https://monitor.example.com`.

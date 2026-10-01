@@ -1,0 +1,7 @@
+.dart_tool/
+build/
+pubspec.lock
+*.db
+*.db-*
+Dockerfile
+.dockerignore

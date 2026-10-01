@@ -1,0 +1,10 @@
+# HTTPS in front of the monitor. Caddy gets a Let's Encrypt certificate for
+# $DOMAIN, renews it, and redirects http:// to https://.
+{$DOMAIN} {
+	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+	reverse_proxy monitor:8080
+}

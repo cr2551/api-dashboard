@@ -81,7 +81,7 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 | Uptime % and latency trend chart | ✅ | [#15](https://github.com/cr2551/api-dashboard/issues/15) |
 | Connect Flutter app to backend API | ✅ | [#11](https://github.com/cr2551/api-dashboard/issues/11), [#12](https://github.com/cr2551/api-dashboard/issues/12), [#13](https://github.com/cr2551/api-dashboard/issues/13) |
 | Basic auth if backend is exposed publicly | ✅ | Backend bearer token (`API_TOKEN`): [#30](https://github.com/cr2551/api-dashboard/issues/30). App sends it, with a token prompt on 401: [#31](https://github.com/cr2551/api-dashboard/issues/31) |
-| Deploy backend somewhere persistent | ⬜ | [#32](https://github.com/cr2551/api-dashboard/issues/32) |
+| Deploy backend somewhere persistent | 🟡 | Docker Compose + Caddy (HTTPS), token required, SQLite in a volume, `restart: always`; steps in [deploy/README.md](deploy/README.md). Verified end to end on a local Docker host; still needs running on the chosen server (Google Cloud `e2-micro`) and `deploy/check.sh` passing against it: [#32](https://github.com/cr2551/api-dashboard/issues/32) |
 
 ## Phase 8: Documentation
 

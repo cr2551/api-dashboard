@@ -5,6 +5,7 @@ import 'probe.dart';
 import 'probe_result.dart';
 import 'probe_store.dart';
 import 'sla.dart';
+import 'stored_event.dart';
 
 /// Probe -> store -> evaluate SLA -> alert, one cycle at a time.
 class Monitor {
@@ -62,6 +63,7 @@ class Monitor {
     }
 
     for (final event in events) {
+      _recordEvent(event);
       if (event.kind == BreachEventKind.resolved) {
         _sendRecovery(event);
         continue;
@@ -78,6 +80,25 @@ class Monitor {
       }
     }
     return result;
+  }
+
+  /// Saves the event for the dashboard's notification feed. A storage error
+  /// is logged and must not stop the alert.
+  void _recordEvent(BreachEvent event) {
+    try {
+      store.insertBreachEvent(
+        StoredBreachEvent(
+          provider: event.breach.provider,
+          type: event.breach.type,
+          kind: event.kind,
+          message: event.breach.message,
+          timestamp: _now().toUtc(),
+          duration: event.duration,
+        ),
+      );
+    } catch (e) {
+      logger.error('could not store ${event.breach.provider} event: $e');
+    }
   }
 
   void _sendRecovery(BreachEvent event) {

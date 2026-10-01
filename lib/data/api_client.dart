@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'models.dart';
+import 'service_event.dart';
 
 class ApiException implements Exception {
   const ApiException(this.message);
@@ -68,6 +69,23 @@ class ApiClient {
   }) async => ServiceHistory.fromJson(
     await _get('/api/history', {'provider': provider, 'minutes': '$minutes'}),
   );
+
+  /// Breaches that opened or resolved, oldest first. [after] returns only
+  /// events with a greater id; [limit] keeps the most recent ones.
+  Future<List<ServiceEvent>> getEvents({int? after, int limit = 50}) async {
+    final json = await _get('/api/events', {
+      if (after != null) 'after': '$after',
+      'limit': '$limit',
+    });
+    try {
+      return [
+        for (final e in json['events'] as List)
+          ServiceEvent.fromJson(e as Map<String, dynamic>),
+      ];
+    } catch (_) {
+      throw const ApiException('Backend returned an unexpected response');
+    }
+  }
 
   Future<Map<String, dynamic>> _get(
     String path,

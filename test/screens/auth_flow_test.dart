@@ -182,6 +182,23 @@ void main() {
       expect(field().obscureText, isFalse);
     });
 
+    testWidgets('the token dialog does not overflow on a short screen', (
+      tester,
+    ) async {
+      // A phone in landscape (the browser pane that showed the bug was 365 px tall).
+      tester.view.physicalSize = const Size(700, 360);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(app(clientFor(FakeBackend())));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Enter access token'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Backend access token'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('polling stops while unauthorized', (tester) async {
       final backend = FakeBackend();
       await tester.pumpWidget(

@@ -37,6 +37,9 @@ class _TokenDialogState extends State<_TokenDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      // Scrolls instead of overflowing on short screens (a phone in
+      // landscape, or the keyboard being open).
+      scrollable: true,
       title: const Text('Backend access token'),
       content: Column(
         mainAxisSize: MainAxisSize.min,

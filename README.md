@@ -83,6 +83,7 @@ Storage, evaluation and alert-sending errors are logged and the cycle carries on
 - **Without a `services.json`** the server monitors Stripe only, with the **default policy** (60 minutes, p95 under 1 s, 99.9% uptime, no debounce), which is twitchy: one failed probe in ~120 already breaches. Copy [services.example.json](services.example.json) to `services.json` to tune thresholds per service.
 - Probes are plain `GET`s judged by status code. There is no request body, POST, or response-content check yet, and only Stripe has authentication built in.
 - Breach state is not persisted across restarts (see above).
+- **With the example thresholds one failed probe opens an uptime breach** that lasts until it leaves the 60-minute window, and the alert can arrive after the service is already back. Measured in [docs/case-studies.md](docs/case-studies.md), with suggested fixes.
 
 ## Quality
 

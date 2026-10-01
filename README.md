@@ -230,7 +230,7 @@ then point the app at it: `flutter run -d chrome --dart-define=API_BASE_URL=http
 | DNS failure | a `.invalid` hostname | Error `connection` |
 | Expired certificate | `expired.badssl.com` | Error `tls` |
 
-The error category appears in the server log (`FAIL ... http5xx: HTTP 503`); the dashboard shows the state and breaches. Nothing in this file ever recovers, so to see a **recovery** message use `dart run bin/drill.dart` (see [Testing the alert pipeline](#testing-the-alert-pipeline)), or give a flaky service a short `windowMinutes`. Set `NTFY_TOPIC` first to get the alerts on your phone.
+The failure type is shown on each card as a chip (Timeout, Connection / DNS, TLS / certificate, HTTP 4xx, HTTP 5xx, Other; tap or hover for a plain-language explanation), in the detail screen as a per-type count for the selected range, and in the server log (`FAIL ... http5xx: HTTP 503`). The API exposes it as `errorKind` on each probe. Nothing in this file ever recovers, so to see a **recovery** message use `dart run bin/drill.dart` (see [Testing the alert pipeline](#testing-the-alert-pipeline)), or give a flaky service a short `windowMinutes`. Set `NTFY_TOPIC` first to get the alerts on your phone.
 
 ## API authentication
 

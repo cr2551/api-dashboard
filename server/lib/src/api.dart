@@ -145,4 +145,5 @@ Map<String, dynamic> _probeJson(ProbeResult r) => {
   'success': r.success,
   'statusCode': r.statusCode,
   'error': r.error,
+  'errorKind': r.errorKind?.name,
 };

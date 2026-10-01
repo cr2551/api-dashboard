@@ -19,13 +19,16 @@ import 'probe_result.dart';
 /// provider. The recorded latency is that of the final attempt, and the
 /// timestamp is when the probe started.
 class HttpProbe implements Probe {
+  /// Extra attempts after a transport-level failure, unless overridden.
+  static const defaultRetries = 1;
+
   HttpProbe({
     required this.provider,
     required this.endpoint,
     this.headers = const {},
     this.expectedStatus,
     this.timeout = const Duration(seconds: 10),
-    this.retries = 1,
+    this.retries = defaultRetries,
     http.Client? client,
     DateTime Function()? now,
     Stopwatch Function()? stopwatch,

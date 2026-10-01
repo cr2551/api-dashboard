@@ -40,6 +40,59 @@ void main() {
   });
   tearDown(() => store.close());
 
+  group('settings', () {
+    test('describe how a service is monitored and judged', () async {
+      handler = apiHandler(
+        store: store,
+        policies: [
+          const SlaPolicy(
+            provider: 'svc',
+            maxP95Latency: Duration(milliseconds: 750),
+            minUptimePercent: 99,
+            window: Duration(minutes: 30),
+            minSamples: 5,
+            consecutiveFailures: 3,
+          ),
+        ],
+        serviceConfigs: {
+          'svc': ServiceConfig(
+            name: 'svc',
+            type: 'http',
+            endpoint: Uri.parse('https://svc.test/'),
+            expectedStatus: 204,
+            interval: const Duration(seconds: 45),
+            timeout: const Duration(seconds: 7),
+            policy: const SlaPolicy(provider: 'svc'),
+          ),
+        },
+        now: () => now,
+      );
+      final s = (await getJson('/api/status'))['services'].single;
+      expect(s['settings'], {
+        'intervalSeconds': 45,
+        'timeoutSeconds': 7,
+        'retries': HttpProbe.defaultRetries,
+        'expectedStatus': 204,
+        'maxP95LatencyMs': 750,
+        'minUptimePercent': 99.0,
+        'windowMinutes': 30,
+        'minSamples': 5,
+        'consecutiveFailures': 3,
+      });
+    });
+
+    test('probe settings are null when the config is unknown', () async {
+      final s = (await getJson('/api/status'))['services'].single;
+      expect(s['settings']['intervalSeconds'], isNull);
+      expect(s['settings']['timeoutSeconds'], isNull);
+      expect(s['settings']['expectedStatus'], isNull);
+      // The SLA thresholds always come from the policy.
+      expect(s['settings']['maxP95LatencyMs'], 500);
+      expect(s['settings']['minUptimePercent'], 90.0);
+      expect(s['settings']['consecutiveFailures'], 1);
+    });
+  });
+
   group('errorKind', () {
     test('is exposed on the last probe and in the history points', () async {
       store

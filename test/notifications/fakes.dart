@@ -72,6 +72,9 @@ class FakeEventsBackend {
   int? failWith;
   bool offline = false;
 
+  /// Leave latestId out, like a backend from before it existed.
+  bool omitLatestId = false;
+
   void add(Map<String, dynamic> event) => events.add(event);
 
   Future<http.Response> handle(http.Request req) async {
@@ -85,7 +88,13 @@ class FakeEventsBackend {
     final page = matching.length > limit
         ? matching.sublist(matching.length - limit)
         : matching;
-    return http.Response(jsonEncode({'events': page}), 200);
+    final latestId = events.isEmpty
+        ? 0
+        : events.map((e) => e['id'] as int).reduce((a, b) => a > b ? a : b);
+    return http.Response(
+      jsonEncode({if (!omitLatestId) 'latestId': latestId, 'events': page}),
+      200,
+    );
   }
 
   ApiClient client({String? token}) => ApiClient(

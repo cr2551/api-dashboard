@@ -70,6 +70,17 @@ class ServiceEvent {
             '${duration == null ? '' : ' after ${formatEventDuration(duration!)}'}';
 }
 
+/// One response of `GET /api/events`.
+class EventsPage {
+  const EventsPage({required this.events, this.latestId});
+
+  /// Oldest first.
+  final List<ServiceEvent> events;
+
+  /// Highest event id the backend holds; null for older backends.
+  final int? latestId;
+}
+
 /// `45s`, `12m 5s` or `2h 3m`.
 String formatEventDuration(Duration d) {
   final h = d.inHours;

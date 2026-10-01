@@ -250,6 +250,12 @@ The server saves every breach that **opens** or **resolves** to SQLite (the `bre
 
 **Android:** the manifest requests `INTERNET` (needed by release builds) and `POST_NOTIFICATIONS`, and the build enables core-library desugaring, which the notification plugin requires. A release build must talk to an HTTPS backend; plain `http://` is blocked by Android. The app token and the notification settings are kept separate: the token is memory-only, while the on/off choice and the last alert seen are stored with `shared_preferences`.
 
+## How failures are handled (in the dashboard)
+
+Open a service and expand **How failures are handled** under the chart. It explains, with that service's real numbers, what the monitor does: how often it checks and how long it waits, whether a failed check is retried (connection, timeout and TLS failures are retried once; 4xx/5xx responses never are), what counts as a failure, the SLA it is judged against over its window, how many checks in a row a breach must hold before it alerts (the debounce), and that you get one alert when a breach opens and one when it recovers. Below that it lists the **recent alerts for that service**. The numbers come from `/api/status` (`settings` on each service); an older backend that does not send them simply shows no section.
+
+If the backend's database is reset (or you point the app at a different backend), the app notices that the newest alert id went backwards (`latestId` in `/api/events`), drops its remembered position and reloads the history silently, so alerts are not missed.
+
 ## API authentication
 
 Set `API_TOKEN` (env var, else the git-ignored `config.json`) and every API request must send `Authorization: Bearer <token>`; anything else gets `401 {"error":"unauthorized"}`. The CORS preflight (`OPTIONS`) stays open, since browsers send it without credentials, and 401 responses still carry CORS headers so the dashboard can read them.

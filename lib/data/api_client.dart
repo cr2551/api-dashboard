@@ -72,16 +72,24 @@ class ApiClient {
 
   /// Breaches that opened or resolved, oldest first. [after] returns only
   /// events with a greater id; [limit] keeps the most recent ones.
-  Future<List<ServiceEvent>> getEvents({int? after, int limit = 50}) async {
+  Future<List<ServiceEvent>> getEvents({int? after, int limit = 50}) async =>
+      (await getEventsPage(after: after, limit: limit)).events;
+
+  /// Like [getEvents], plus the highest event id the backend holds, which
+  /// lets a caller notice that the backend's database was reset.
+  Future<EventsPage> getEventsPage({int? after, int limit = 50}) async {
     final json = await _get('/api/events', {
       if (after != null) 'after': '$after',
       'limit': '$limit',
     });
     try {
-      return [
-        for (final e in json['events'] as List)
-          ServiceEvent.fromJson(e as Map<String, dynamic>),
-      ];
+      return EventsPage(
+        events: [
+          for (final e in json['events'] as List)
+            ServiceEvent.fromJson(e as Map<String, dynamic>),
+        ],
+        latestId: json['latestId'] as int?,
+      );
     } catch (_) {
       throw const ApiException('Backend returned an unexpected response');
     }

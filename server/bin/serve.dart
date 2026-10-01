@@ -55,6 +55,7 @@ Future<void> main() async {
     apiHandler(
       store: store,
       policies: [for (final s in services) s.policy],
+      serviceConfigs: {for (final s in services) s.config.name: s.config},
       displayNames: {
         for (final s in services)
           if (s.config.displayName != null)

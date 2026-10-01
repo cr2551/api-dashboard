@@ -2,8 +2,10 @@ import 'dart:convert';
 
 import 'package:shelf/shelf.dart';
 
+import 'http_probe.dart';
 import 'probe_result.dart';
 import 'probe_store.dart';
+import 'services_config.dart';
 import 'sla.dart';
 import 'stats.dart';
 
@@ -21,7 +23,8 @@ const _cors = {
 /// * `GET /api/history?provider=stripe&minutes=60`: probes for the chart.
 /// * `GET /api/events?after=<id>&limit=50`: breaches that opened or resolved,
 ///   oldest first, for the notification feed. `after` returns only newer
-///   events; `limit` (1 to 200) keeps the most recent ones.
+///   events; `limit` (1 to 200) keeps the most recent ones. `latestId` is the
+///   highest id stored, so a client can tell the database was reset.
 ///
 /// When [authToken] is set, every request except the CORS preflight must send
 /// `Authorization: Bearer <token>`, otherwise it gets a 401. With no token the
@@ -31,6 +34,7 @@ Handler apiHandler({
   required List<SlaPolicy> policies,
   String? authToken,
   Map<String, String> displayNames = const {},
+  Map<String, ServiceConfig> serviceConfigs = const {},
   DateTime Function()? now,
 }) {
   final clock = now ?? DateTime.now;
@@ -61,6 +65,7 @@ Handler apiHandler({
       'uptimePercent': uptimePercent(results),
       'avgLatencyMs': averageLatency(results)?.inMilliseconds,
       'p95LatencyMs': p95Latency(results)?.inMilliseconds,
+      'settings': _settingsJson(policy, serviceConfigs[policy.provider]),
       'breaches': [
         for (final b in detectBreaches(policy, results))
           {'type': b.type.name, 'message': b.message},
@@ -126,6 +131,8 @@ Handler apiHandler({
           return error(400, 'limit must be between 1 and 200');
         }
         return json({
+          // Lets a client notice the database was reset (ids went backwards).
+          'latestId': store.latestBreachEventId(),
           'events': [
             for (final e in store.breachEvents(afterId: after, limit: limit))
               {
@@ -145,6 +152,20 @@ Handler apiHandler({
     }
   };
 }
+
+/// How a service is monitored and judged, so the dashboard can explain how
+/// failures are handled. Probe settings are null when [config] is unknown.
+Map<String, dynamic> _settingsJson(SlaPolicy policy, ServiceConfig? config) => {
+  'intervalSeconds': config?.interval.inSeconds,
+  'timeoutSeconds': config?.timeout.inSeconds,
+  'retries': HttpProbe.defaultRetries,
+  'expectedStatus': config?.expectedStatus,
+  'maxP95LatencyMs': policy.maxP95Latency.inMilliseconds,
+  'minUptimePercent': policy.minUptimePercent,
+  'windowMinutes': policy.window.inMinutes,
+  'minSamples': policy.minSamples,
+  'consecutiveFailures': policy.consecutiveFailures,
+};
 
 bool _hasValidToken(Request request, String expected) {
   final header = request.headers['authorization'];

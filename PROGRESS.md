@@ -88,7 +88,7 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 | Task | Status | Issue |
 |---|---|---|
 | Document architecture and SLA/debounce design decisions | ✅ | README "Pipeline" and "Design decisions" sections: [#33](https://github.com/cr2551/api-dashboard/issues/33) |
-| Document real breaches as case studies | ⬜ | Unblocked: the monitor now runs continuously (#32) and alerts on breaches (#23): [#34](https://github.com/cr2551/api-dashboard/issues/34) |
+| Document real breaches as case studies | ✅ | [docs/case-studies.md](docs/case-studies.md): a real observation run (no breach, one latency near-miss), a staged one-probe outage under the production thresholds, and the alert drill, with what to change: [#34](https://github.com/cr2551/api-dashboard/issues/34) |
 
 ## Who can work on what
 
@@ -96,7 +96,7 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 
 | Component | Issues |
 |---|---|
-| docs | [#34](https://github.com/cr2551/api-dashboard/issues/34) case studies: write up any breach the deployed monitor catches (what happened, what the dashboard showed, how fast it alerted), or add a note that none has happened yet. Best done after it has run for a while. |
+| backend | Threshold follow-ups from [docs/case-studies.md](docs/case-studies.md#what-to-change): one failed probe always opens a ~1 hour uptime breach under the example thresholds, alerts do not say whether the service is already back, and p95 is judged on the single slowest probe until 20 samples. No issue yet. |
 | backend | Follow-up to [#25](https://github.com/cr2551/api-dashboard/issues/25): one live ntfy push. Run `dart run bin/drill.dart` with `NTFY_TOPIC` set and confirm the alert and the recovery arrive on a phone, then put the same topic in `deploy/.env` so the deployed monitor alerts too. |
 | frontend | [#2](https://github.com/cr2551/api-dashboard/issues/2) leftover: branch `feat/dashboard-gui` has two unmerged commits (an actionable "cannot reach the backend" error in `lib/data/api_client.dart`, and step-by-step run instructions in the README). It is far behind `main`, so redo or rebase them, then close #2. |
 
@@ -116,7 +116,7 @@ Nothing is blocked: every dependency of the open tasks is done.
                └──> #32 deploy ──> #34 case studies (also needs #23)
 ```
 
-Everything in these chains is done except #34, which no longer waits for anything.
+Everything in these chains is done.
 
 ## Earlier completed work
 

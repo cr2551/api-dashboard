@@ -96,15 +96,23 @@ class _StatusScreenState extends State<StatusScreen> {
       MaterialPageRoute<void>(
         builder: (_) => NotificationsScreen(
           center: center,
-          onOpenService: (e) => Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => ServiceDetailScreen(
-                client: widget.client,
-                provider: e.provider,
-                displayName: e.displayName,
+          onOpenService: (e) {
+            // Settings come from the latest status, which the alert lacks.
+            final status = _snapshot?.services
+                .where((s) => s.provider == e.provider)
+                .firstOrNull;
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => ServiceDetailScreen(
+                  client: widget.client,
+                  provider: e.provider,
+                  displayName: e.displayName,
+                  settings: status?.settings,
+                  notifications: center,
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
@@ -153,6 +161,8 @@ class _StatusScreenState extends State<StatusScreen> {
           client: widget.client,
           provider: service.provider,
           displayName: service.displayName,
+          settings: service.settings,
+          notifications: widget.notifications,
         ),
       ),
     );

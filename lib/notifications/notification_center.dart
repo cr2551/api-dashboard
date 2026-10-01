@@ -95,8 +95,20 @@ class NotificationCenter extends ChangeNotifier {
     if (_polling || _needsToken || _disposed) return;
     _polling = true;
     try {
-      final firstRun = _lastId == null;
-      final fresh = await client.getEvents(after: _lastId, limit: 50);
+      var firstRun = _lastId == null;
+      var page = await client.getEventsPage(after: _lastId, limit: 50);
+      final latest = page.latestId;
+      if (!firstRun && latest != null && latest < _lastId!) {
+        // The backend now holds fewer events than we have seen: its database
+        // was reset or this is a different backend. Our remembered position
+        // is meaningless, so start over from its history without alerting.
+        _events.clear();
+        _unread = 0;
+        _lastId = null;
+        firstRun = true;
+        page = await client.getEventsPage(limit: 50);
+      }
+      final fresh = page.events;
       if (_disposed) return;
       if (fresh.isEmpty) {
         if (firstRun) await _remember(0);

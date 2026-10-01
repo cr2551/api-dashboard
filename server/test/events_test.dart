@@ -84,6 +84,14 @@ void main() {
       ]);
     });
 
+    test('latestBreachEventId is 0 when empty and then the highest id', () {
+      expect(store.latestBreachEventId(), 0);
+      store
+        ..insertBreachEvent(event('stripe', BreachEventKind.opened))
+        ..insertBreachEvent(event('stripe', BreachEventKind.resolved));
+      expect(store.latestBreachEventId(), 2);
+    });
+
     test('a negative limit is rejected and zero returns nothing', () {
       store.insertBreachEvent(event('stripe', BreachEventKind.opened));
       expect(() => store.breachEvents(limit: -1), throwsArgumentError);
@@ -212,6 +220,27 @@ void main() {
       expect(list[1]['kind'], 'resolved');
       expect(list[1]['durationSeconds'], 180);
     });
+
+    test(
+      'latestId is the highest stored id, even when after hides all',
+      () async {
+        Future<int> latestId(String path) async {
+          final res = await get(path);
+          return (jsonDecode(await res.readAsString()) as Map)['latestId']
+              as int;
+        }
+
+        expect(await latestId('/api/events'), 0);
+        for (var i = 0; i < 3; i++) {
+          store.insertBreachEvent(
+            event('stripe', BreachEventKind.opened, minute: i),
+          );
+        }
+        expect(await latestId('/api/events'), 3);
+        expect(await latestId('/api/events?after=3'), 3);
+        expect(await events('/api/events?after=3'), isEmpty);
+      },
+    );
 
     test('after and limit narrow the result', () async {
       for (var i = 0; i < 6; i++) {

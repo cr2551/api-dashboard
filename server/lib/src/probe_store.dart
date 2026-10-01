@@ -87,6 +87,15 @@ class ProbeStore {
     );
   }
 
+  /// The highest breach event id stored, or 0 when there are none. A client
+  /// that remembers a higher id than this knows the database was reset.
+  int latestBreachEventId() {
+    final row = _db.select(
+      'SELECT COALESCE(MAX(id), 0) AS id FROM breach_events',
+    );
+    return row.single['id'] as int;
+  }
+
   /// The most recent [limit] breach events with an id greater than [afterId]
   /// (all of them when null), **oldest first** so a client can append them
   /// and remember the last id.

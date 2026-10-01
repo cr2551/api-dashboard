@@ -145,6 +145,56 @@ void main() {
       expect(notifier.shown.single.title, '3 new alerts');
     });
 
+    test('a reset backend is reloaded from its history, silently', () async {
+      // We saw up to event 9 on a previous backend or database.
+      prefs.lastEventId = 9;
+      prefs.enabled = true;
+      await center.init();
+      backend
+        ..add(eventJson(1, message: 'fresh one'))
+        ..add(eventJson(2, message: 'fresh two'));
+
+      await center.poll();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(center.events.map((e) => e.id), [2, 1]);
+      expect(center.unread, 0, reason: 'history, not news');
+      expect(notifier.shown, isEmpty);
+      expect(streamed, isEmpty);
+      expect(prefs.lastEventId, 2);
+
+      // And it keeps working from the new position.
+      backend.add(eventJson(3));
+      await center.poll();
+      expect(center.unread, 1);
+      expect(center.events.first.id, 3);
+    });
+
+    test('a reset backend drops the old list', () async {
+      backend.add(eventJson(5, message: 'old'));
+      await center.init();
+      await center.poll();
+      expect(center.events.single.message, 'old');
+
+      // The backend is replaced by one with different, lower ids.
+      backend.events
+        ..clear()
+        ..add(eventJson(1, message: 'new'));
+      await center.poll();
+
+      expect(center.events.map((e) => e.message), ['new']);
+    });
+
+    test('an older backend without latestId keeps the old behaviour', () async {
+      backend.omitLatestId = true;
+      backend.add(eventJson(1));
+      await center.init();
+      await center.poll();
+      backend.add(eventJson(2));
+      await center.poll();
+      expect(center.events.map((e) => e.id), [2, 1]);
+    });
+
     test('does not poll twice at once', () async {
       await center.init();
       await Future.wait([center.poll(), center.poll(), center.poll()]);

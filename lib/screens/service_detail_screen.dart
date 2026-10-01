@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../data/api_client.dart';
 import '../data/failure_kind.dart';
 import '../data/models.dart';
+import '../notifications/notification_center.dart';
 import '../widgets/failure_chip.dart';
+import '../widgets/failure_handling_panel.dart';
 import '../widgets/latency_chart.dart';
 import '../widgets/service_card.dart';
 import '../widgets/token_dialog.dart';
@@ -23,8 +25,17 @@ class ServiceDetailScreen extends StatefulWidget {
     required this.client,
     required this.provider,
     this.displayName,
+    this.settings,
+    this.notifications,
     this.initialMinutes = 60,
   });
+
+  /// How this service is monitored. When given, a "How failures are
+  /// handled" section is shown under the chart.
+  final ServiceSettings? settings;
+
+  /// Source of the service's recent alerts for that section.
+  final NotificationCenter? notifications;
 
   final ApiClient client;
   final String provider;
@@ -168,8 +179,10 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     final latencies = points.map((p) => p.latencyMs);
     final failures = points.where((p) => !p.success).length;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    // A scrolling list rather than a fixed column, so the chart, the failure
+    // summary and the "how failures are handled" section all fit on a short
+    // screen.
+    return ListView(
       children: [
         Wrap(
           spacing: 32,
@@ -197,7 +210,8 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
         const SizedBox(height: 16),
         Text('Latency', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
-        Expanded(
+        SizedBox(
+          height: 280,
           child: points.isEmpty
               ? const Center(child: Text('No probes in this time range'))
               : Padding(
@@ -208,7 +222,26 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   ),
                 ),
         ),
+        if (widget.settings != null) ...[
+          const SizedBox(height: 16),
+          _handlingPanel(widget.settings!),
+        ],
       ],
+    );
+  }
+
+  Widget _handlingPanel(ServiceSettings settings) {
+    final center = widget.notifications;
+    if (center == null) return FailureHandlingPanel(settings: settings);
+    return ListenableBuilder(
+      listenable: center,
+      builder: (context, _) => FailureHandlingPanel(
+        settings: settings,
+        events: [
+          for (final e in center.events)
+            if (e.provider == widget.provider) e,
+        ],
+      ),
     );
   }
 }

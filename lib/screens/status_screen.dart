@@ -4,8 +4,12 @@ import 'package:flutter/material.dart';
 
 import '../data/api_client.dart';
 import '../data/models.dart';
+import '../data/service_event.dart';
+import '../notifications/notification_center.dart';
+import '../widgets/notification_bell.dart';
 import '../widgets/service_card.dart';
 import '../widgets/token_dialog.dart';
+import 'notifications_screen.dart';
 import 'service_detail_screen.dart';
 
 /// Home screen: current status of every monitored service.
@@ -15,9 +19,14 @@ class StatusScreen extends StatefulWidget {
     required this.client,
     this.refreshInterval = const Duration(seconds: 10),
     this.onOpenService,
+    this.notifications,
   });
 
   final ApiClient client;
+
+  /// Alerts feed and system notifications. The bell and in-app alert
+  /// snackbars only appear when this is provided.
+  final NotificationCenter? notifications;
 
   /// How often to poll the backend; null disables auto-refresh.
   final Duration? refreshInterval;
@@ -36,10 +45,12 @@ class _StatusScreenState extends State<StatusScreen> {
   bool _unauthorized = false;
   bool _tokenRejected = false;
   Timer? _timer;
+  StreamSubscription<List<ServiceEvent>>? _alerts;
 
   @override
   void initState() {
     super.initState();
+    _alerts = widget.notifications?.newEvents.listen(_showAlertSnackBar);
     _refresh();
     final interval = widget.refreshInterval;
     if (interval != null) {
@@ -53,7 +64,50 @@ class _StatusScreenState extends State<StatusScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _alerts?.cancel();
     super.dispose();
+  }
+
+  /// Tells the user about a new alert inside the app, which needs no
+  /// notification permission.
+  void _showAlertSnackBar(List<ServiceEvent> events) {
+    if (!mounted) return;
+    // Another screen on top (the alerts list or a service) already shows or
+    // is about to show these, so a snackbar would only be noise.
+    if (ModalRoute.of(context)?.isCurrent == false) return;
+    final latest = events.last;
+    final text = events.length == 1
+        ? '${latest.title}: ${latest.body}'
+        : '${events.length} new alerts, latest: ${latest.title}';
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(text),
+          action: SnackBarAction(label: 'View', onPressed: _openNotifications),
+        ),
+      );
+  }
+
+  void _openNotifications() {
+    final center = widget.notifications;
+    if (center == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => NotificationsScreen(
+          center: center,
+          onOpenService: (e) => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => ServiceDetailScreen(
+                client: widget.client,
+                provider: e.provider,
+                displayName: e.displayName,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _refresh() async {
@@ -88,6 +142,7 @@ class _StatusScreenState extends State<StatusScreen> {
     final token = await showTokenDialog(context, rejected: _tokenRejected);
     if (token == null || !mounted) return;
     widget.client.apiToken = token;
+    widget.notifications?.resume();
     await _refresh();
   }
 
@@ -109,6 +164,11 @@ class _StatusScreenState extends State<StatusScreen> {
       appBar: AppBar(
         title: const Text('API Dashboard'),
         actions: [
+          if (widget.notifications != null)
+            NotificationBell(
+              center: widget.notifications!,
+              onPressed: _openNotifications,
+            ),
           IconButton(
             tooltip: 'Access token',
             icon: const Icon(Icons.key),

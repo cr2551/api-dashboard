@@ -232,6 +232,24 @@ then point the app at it: `flutter run -d chrome --dart-define=API_BASE_URL=http
 
 The error category appears in the server log (`FAIL ... http5xx: HTTP 503`); the dashboard shows the state and breaches. Nothing in this file ever recovers, so to see a **recovery** message use `dart run bin/drill.dart` (see [Testing the alert pipeline](#testing-the-alert-pipeline)), or give a flaky service a short `windowMinutes`. Set `NTFY_TOPIC` first to get the alerts on your phone.
 
+## Notifications in the dashboard
+
+The server saves every breach that **opens** or **resolves** to SQLite (the `breach_events` table) and serves them at `GET /api/events?after=<id>&limit=50` (oldest first; `after` returns only newer events, `limit` is 1 to 200; protected by `API_TOKEN` like the rest of the API). The app polls it every 15 seconds and shows alerts three ways:
+
+1. **A bell with an unread badge** in the app bar. It opens the alerts list (newest first, with the service, breach type, message, how long a breach lasted, and when). Tapping an alert opens that service.
+2. **An in-app snackbar** with a *View* action when a new alert arrives and the dashboard is on screen. This needs no permission and works everywhere.
+3. **System notifications** (opt-in): the **System notifications** switch at the top of the alerts list asks for permission, then shows a real pop-up for each new alert (a single summary if several arrive at once). A *Send test notification* button checks it works. The choice is remembered.
+
+| Platform | How system notifications are shown |
+|---|---|
+| Browser | The browser's Notification API. The browser asks for permission when you flip the switch, and only allows it on `https://` pages or `localhost`. If you blocked it, the switch explains how to allow it again in the site settings. |
+| Android | `flutter_local_notifications` on a high-importance "SLA alerts" channel. Android 13+ shows a permission prompt. |
+| Windows, iOS, macOS, Linux | Not set up: the switch is disabled with an explanation, and the bell and snackbars still work. |
+
+**What it does not do (yet):** these notifications come from the app polling, so they only appear **while the app or browser tab is running**. Nothing reaches you once it is closed or the phone has put it to sleep; for that, use the ntfy alerts above, which the server sends itself. Alerts that happened while the app was closed are listed (and counted) the next time you open it, and the first time you ever open the app the existing history loads silently instead of notifying you about old alerts. True background push (web push or Firebase) needs a deployed HTTPS backend ([#32](https://github.com/cr2551/api-dashboard/issues/32)).
+
+**Android:** the manifest requests `INTERNET` (needed by release builds) and `POST_NOTIFICATIONS`, and the build enables core-library desugaring, which the notification plugin requires. A release build must talk to an HTTPS backend; plain `http://` is blocked by Android. The app token and the notification settings are kept separate: the token is memory-only, while the on/off choice and the last alert seen are stored with `shared_preferences`.
+
 ## API authentication
 
 Set `API_TOKEN` (env var, else the git-ignored `config.json`) and every API request must send `Authorization: Bearer <token>`; anything else gets `401 {"error":"unauthorized"}`. The CORS preflight (`OPTIONS`) stays open, since browsers send it without credentials, and 401 responses still carry CORS headers so the dashboard can read them.

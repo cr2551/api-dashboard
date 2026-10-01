@@ -19,6 +19,9 @@ const _cors = {
 ///   latency stats and current SLA breaches over the policy window, plus the
 ///   optional friendly `displayName` from [displayNames]).
 /// * `GET /api/history?provider=stripe&minutes=60`: probes for the chart.
+/// * `GET /api/events?after=<id>&limit=50`: breaches that opened or resolved,
+///   oldest first, for the notification feed. `after` returns only newer
+///   events; `limit` (1 to 200) keeps the most recent ones.
 ///
 /// When [authToken] is set, every request except the CORS preflight must send
 /// `Authorization: Bearer <token>`, otherwise it gets a 401. With no token the
@@ -110,6 +113,32 @@ Handler apiHandler({
           'minutes': minutes,
           'uptimePercent': uptimePercent(results),
           'points': [for (final r in results) _probeJson(r)],
+        });
+      case 'api/events':
+        final params = request.url.queryParameters;
+        final afterRaw = params['after'];
+        final after = afterRaw == null ? null : int.tryParse(afterRaw);
+        if (afterRaw != null && (after == null || after < 0)) {
+          return error(400, 'after must be a non-negative integer');
+        }
+        final limit = int.tryParse(params['limit'] ?? '50');
+        if (limit == null || limit < 1 || limit > 200) {
+          return error(400, 'limit must be between 1 and 200');
+        }
+        return json({
+          'events': [
+            for (final e in store.breachEvents(afterId: after, limit: limit))
+              {
+                'id': e.id,
+                'provider': e.provider,
+                'displayName': displayNames[e.provider],
+                'type': e.type.name,
+                'kind': e.kind.name,
+                'message': e.message,
+                'timestamp': e.timestamp.toUtc().toIso8601String(),
+                'durationSeconds': e.duration?.inSeconds,
+              },
+          ],
         });
       default:
         return error(404, 'not found');

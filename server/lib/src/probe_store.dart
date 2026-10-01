@@ -1,6 +1,9 @@
 import 'package:sqlite3/sqlite3.dart';
 
+import 'breach_tracker.dart';
 import 'probe_result.dart';
+import 'sla.dart';
+import 'stored_event.dart';
 
 /// Persists [ProbeResult]s in SQLite.
 class ProbeStore {
@@ -21,6 +24,17 @@ class ProbeStore {
     _db.execute('''
       CREATE INDEX IF NOT EXISTS idx_probe_results_provider_time
       ON probe_results (provider, timestamp_us)
+    ''');
+    _db.execute('''
+      CREATE TABLE IF NOT EXISTS breach_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        provider TEXT NOT NULL,
+        breach_type TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        message TEXT NOT NULL,
+        timestamp_us INTEGER NOT NULL,
+        duration_ms INTEGER
+      )
     ''');
   }
 
@@ -54,6 +68,53 @@ class ProbeStore {
         r.errorKind?.name,
       ],
     );
+  }
+
+  /// Saves a breach that opened or resolved. The id is assigned here.
+  void insertBreachEvent(StoredBreachEvent e) {
+    _db.execute(
+      'INSERT INTO breach_events '
+      '(provider, breach_type, kind, message, timestamp_us, duration_ms) '
+      'VALUES (?, ?, ?, ?, ?, ?)',
+      [
+        e.provider,
+        e.type.name,
+        e.kind.name,
+        e.message,
+        e.timestamp.microsecondsSinceEpoch,
+        e.duration?.inMilliseconds,
+      ],
+    );
+  }
+
+  /// The most recent [limit] breach events with an id greater than [afterId]
+  /// (all of them when null), **oldest first** so a client can append them
+  /// and remember the last id.
+  List<StoredBreachEvent> breachEvents({int? afterId, int limit = 50}) {
+    if (limit < 0) throw ArgumentError.value(limit, 'limit', 'must be >= 0');
+    final rows = _db.select(
+      'SELECT * FROM ('
+      'SELECT * FROM breach_events WHERE id > ? ORDER BY id DESC LIMIT ?'
+      ') ORDER BY id ASC',
+      [afterId ?? 0, limit],
+    );
+    return [
+      for (final row in rows)
+        StoredBreachEvent(
+          id: row['id'] as int,
+          provider: row['provider'] as String,
+          type: SlaBreachType.values.byName(row['breach_type'] as String),
+          kind: BreachEventKind.values.byName(row['kind'] as String),
+          message: row['message'] as String,
+          timestamp: DateTime.fromMicrosecondsSinceEpoch(
+            row['timestamp_us'] as int,
+            isUtc: true,
+          ),
+          duration: row['duration_ms'] == null
+              ? null
+              : Duration(milliseconds: row['duration_ms'] as int),
+        ),
+    ];
   }
 
   /// Results for [provider] at or after [since], oldest first.

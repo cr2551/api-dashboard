@@ -190,6 +190,7 @@ SlaPolicy _parsePolicy(String provider, Object? json, String at) {
     'minUptimePercent',
     'windowMinutes',
     'minSamples',
+    'minLatencySamples',
     'consecutiveFailures',
   }, at);
 
@@ -229,6 +230,9 @@ SlaPolicy _parsePolicy(String provider, Object? json, String at) {
       at,
       fallback: defaults.minSamples,
     ),
+    minLatencySamples: map.containsKey('minLatencySamples')
+        ? _positiveInt(map, 'minLatencySamples', at, fallback: 0)
+        : null,
     consecutiveFailures: _positiveInt(
       map,
       'consecutiveFailures',

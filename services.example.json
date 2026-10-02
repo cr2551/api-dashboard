@@ -11,6 +11,7 @@
         "minUptimePercent": 99.9,
         "windowMinutes": 60,
         "minSamples": 5,
+        "minLatencySamples": 20,
         "consecutiveFailures": 2
       }
     },
@@ -24,6 +25,7 @@
         "maxP95LatencyMs": 1500,
         "minUptimePercent": 99,
         "minSamples": 5,
+        "minLatencySamples": 20,
         "consecutiveFailures": 2
       }
     },
@@ -37,6 +39,7 @@
         "maxP95LatencyMs": 1500,
         "minUptimePercent": 99,
         "minSamples": 5,
+        "minLatencySamples": 20,
         "consecutiveFailures": 2
       }
     },
@@ -50,6 +53,7 @@
         "maxP95LatencyMs": 3000,
         "minUptimePercent": 95,
         "minSamples": 5,
+        "minLatencySamples": 20,
         "consecutiveFailures": 3
       }
     }

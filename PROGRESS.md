@@ -72,6 +72,7 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 |---|---|---|
 | Add second and third API | ✅ | Generic `HttpProbe` (`type: "http"`) with GitHub, Frankfurter and httpbin in the example config: [#27](https://github.com/cr2551/api-dashboard/issues/27) |
 | Make thresholds configurable per service | ✅ | p95, uptime, window, min samples and debounce per service: [#29](https://github.com/cr2551/api-dashboard/issues/29) |
+| Judge p95 only with enough samples | ✅ | `minLatencySamples` (off by default, 20 in the example config): one slow probe no longer opens a latency breach on a fresh window, as in the case-study re-run; follow-up from [docs/case-studies.md](docs/case-studies.md#what-to-change). Branch `feat/p95-min-samples` |
 | Config file (YAML/JSON) for services | ✅ | Schema, validating loader, `services.example.json` ([#26](https://github.com/cr2551/api-dashboard/issues/26)); `serve.dart` and `monitor.dart` run one monitor per service ([#28](https://github.com/cr2551/api-dashboard/issues/28)) |
 
 ## Phase 7: Flutter dashboard
@@ -97,7 +98,7 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 
 | Component | Issues |
 |---|---|
-| backend | Threshold follow-ups from [docs/case-studies.md](docs/case-studies.md#what-to-change): one failed probe always opens a ~1 hour uptime breach under the example thresholds, and p95 is judged on the single slowest probe until 20 samples. No issue yet. |
+| backend | Threshold follow-ups from [docs/case-studies.md](docs/case-studies.md#what-to-change): one failed probe always opens a ~1 hour uptime breach under the example thresholds. No issue yet. |
 | backend | Follow-up to [#25](https://github.com/cr2551/api-dashboard/issues/25): one live ntfy push. Run `dart run bin/drill.dart` with `NTFY_TOPIC` set and confirm the alert and the recovery arrive on a phone, then put the same topic in `deploy/.env` so the deployed monitor alerts too. |
 | frontend | [#2](https://github.com/cr2551/api-dashboard/issues/2) leftover: branch `feat/dashboard-gui` has two unmerged commits (an actionable "cannot reach the backend" error in `lib/data/api_client.dart`, and step-by-step run instructions in the README). It is far behind `main`, so redo or rebase them, then close #2. |
 

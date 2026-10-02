@@ -83,6 +83,7 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 | Uptime % and latency trend chart | ✅ | [#15](https://github.com/cr2551/api-dashboard/issues/15) |
 | Connect Flutter app to backend API | ✅ | [#11](https://github.com/cr2551/api-dashboard/issues/11), [#12](https://github.com/cr2551/api-dashboard/issues/12), [#13](https://github.com/cr2551/api-dashboard/issues/13) |
 | Basic auth if backend is exposed publicly | ✅ | Backend bearer token (`API_TOKEN`): [#30](https://github.com/cr2551/api-dashboard/issues/30). App sends it, with a token prompt on 401: [#31](https://github.com/cr2551/api-dashboard/issues/31) |
+| Degraded state on the card | ✅ | `degraded` in `/api/status` when the last probe is OK but a breach is open, shown as an amber "Degraded" chip instead of "Operational" next to the breach banner; follow-up from [docs/case-studies.md](docs/case-studies.md#what-to-change). Branch `feat/degraded-state` |
 | Deploy backend somewhere persistent | ✅ | Docker Compose + Caddy (automatic HTTPS), `API_TOKEN` required (the server refuses to listen on the network without it), SQLite in a Docker volume, `restart: always` with Docker enabled at boot; steps in [deploy/README.md](deploy/README.md): [#32](https://github.com/cr2551/api-dashboard/issues/32), [PR #55](https://github.com/cr2551/api-dashboard/pull/55) |
 
 ## Phase 8: Documentation

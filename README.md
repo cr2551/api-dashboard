@@ -117,6 +117,8 @@ flutter test
 
    If the backend has `API_TOKEN` set, the app shows an **Enter access token** button on the 401 error (and a key icon in the app bar to change it later). For development you can instead pass `--dart-define=API_TOKEN=<token>`. The token is kept in memory only, so the app asks again after a restart.
 
+Each service card shows one of four states: **Operational** (last probe OK, no breach), **Degraded** (last probe OK, but the SLA window is still breached, for example right after a short outage), **Down** (last probe failed) or **No data** (no probes in the window).
+
 The backend also accepts `PORT`, `HOST` (default `127.0.0.1`), `PROBE_INTERVAL_SECONDS` (default 30) and `DB_PATH` (default `probes.db`).
 ## Alert channel: ntfy.sh
 

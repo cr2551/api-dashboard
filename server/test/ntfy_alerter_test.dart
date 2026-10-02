@@ -68,6 +68,27 @@ void main() {
     expect(req.body, contains('p95 latency 900ms exceeds 500ms'));
   });
 
+  test('puts the last failure time in the recovery body', () async {
+    alerter((_) async => http.Response('', 200)).recovered(
+      breach,
+      const Duration(minutes: 59),
+      lastFailure: DateTime.utc(2026, 10, 1, 21, 4, 53),
+    );
+    await settle();
+
+    expect(
+      sent.single.body,
+      startsWith('Back within SLA after 59m 0s, last failure 21:04:53 UTC '),
+    );
+  });
+
+  test('MultiAlerter forwards the last failure time', () {
+    final a = _Recorder([]);
+    final at = DateTime.utc(2026, 10, 1, 21, 4, 53);
+    MultiAlerter([a]).recovered(breach, Duration.zero, lastFailure: at);
+    expect(a.lastFailures, [at]);
+  });
+
   test('sends a bearer token only when configured', () async {
     alerter((_) async => http.Response('', 200), token: 'tk_1').alert(breach);
     alerter((_) async => http.Response('', 200)).alert(breach);
@@ -144,11 +165,14 @@ class _Recorder implements Alerter {
   _Recorder(this.breaches);
   final List<SlaBreach> breaches;
   final List<Duration> recoveries = [];
+  final List<DateTime?> lastFailures = [];
 
   @override
   void alert(SlaBreach breach) => breaches.add(breach);
 
   @override
-  void recovered(SlaBreach breach, Duration duration) =>
-      recoveries.add(duration);
+  void recovered(SlaBreach breach, Duration duration, {DateTime? lastFailure}) {
+    recoveries.add(duration);
+    lastFailures.add(lastFailure);
+  }
 }

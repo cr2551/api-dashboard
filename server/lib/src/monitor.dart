@@ -104,14 +104,33 @@ class Monitor {
   void _sendRecovery(BreachEvent event) {
     final b = event.breach;
     final lasted = event.duration ?? Duration.zero;
+    final lastFailure = _lastFailure(b, lasted);
     logger.info(
       '${b.provider} ${b.type.name} breach resolved after '
-      '${formatDuration(lasted)}',
+      '${formatDuration(lasted)}${lastFailureSuffix(lastFailure)}',
     );
     try {
-      alerter.recovered(b, lasted);
+      alerter.recovered(b, lasted, lastFailure: lastFailure);
     } catch (e) {
       logger.error('recovery alert failed for ${b.provider}: $e');
+    }
+  }
+
+  /// When the newest failed probe behind an uptime breach ran. An uptime
+  /// breach resolves only once its failures have left the window, so they
+  /// are looked up from one window before the breach opened. Null for
+  /// latency breaches, or when the lookup fails.
+  DateTime? _lastFailure(SlaBreach breach, Duration lasted) {
+    if (breach.type != SlaBreachType.uptime) return null;
+    try {
+      final since = _now().subtract(lasted + policy.window);
+      final failures = store
+          .query(policy.provider, since: since)
+          .where((r) => !r.success);
+      return failures.isEmpty ? null : failures.last.timestamp;
+    } catch (e) {
+      logger.error('could not look up ${policy.provider} failures: $e');
+      return null;
     }
   }
 

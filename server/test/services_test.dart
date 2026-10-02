@@ -32,7 +32,11 @@ class _Recorder implements Alerter {
   void alert(SlaBreach breach) => breaches.add(breach);
 
   @override
-  void recovered(SlaBreach breach, Duration duration) => recoveries.add(breach);
+  void recovered(
+    SlaBreach breach,
+    Duration duration, {
+    DateTime? lastFailure,
+  }) => recoveries.add(breach);
 }
 
 void main() {

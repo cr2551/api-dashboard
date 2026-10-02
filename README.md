@@ -76,6 +76,7 @@ Without state, a 2-hour outage probed every 30 seconds would send 240 alerts. `B
 
 - *Trade-off:* the state is **in memory**. After a restart a breach that is still active is alerted again, and its duration starts from the restart. Persisting it is a possible follow-up.
 - Every breach message ends with whether the newest probe succeeded, for example `uptime 87.50% is below 99.0% (last probe OK)`. A breach is judged over the whole window, so the service is often already back when the alert opens; without this the alert reads like an ongoing outage.
+- An uptime recovery also says when the last failed probe ran, for example `after 59m 0s, last failure 21:04:53 UTC`. An uptime breach only resolves once its failures leave the window, so the duration mostly measures the window; the last failure time is when the outage actually ended.
 
 ### Alerting must never stop monitoring
 Storage, evaluation and alert-sending errors are logged and the cycle carries on. A broken notification channel (for example ntfy being down) cannot stop probing or the dashboard.

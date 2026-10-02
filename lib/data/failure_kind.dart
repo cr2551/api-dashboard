@@ -33,6 +33,11 @@ enum FailureKind {
     icon: Icons.dns_outlined,
     hint: 'The service itself is failing (server error).',
   ),
+  reported(
+    label: 'Provider incident',
+    icon: Icons.campaign_outlined,
+    hint: "The provider's own status page reports an incident or maintenance.",
+  ),
   other(
     label: 'Other',
     icon: Icons.error_outline,

@@ -12,6 +12,7 @@ import 'probe.dart';
 import 'probe_store.dart';
 import 'services_config.dart';
 import 'sla.dart';
+import 'statuspage_probe.dart';
 import 'stripe_probe.dart';
 
 /// One monitored service: its settings and the [Monitor] that runs it.
@@ -88,6 +89,14 @@ Probe buildProbe(
         provider: config.name,
         endpoint: config.endpoint!,
         expectedStatus: config.expectedStatus,
+        timeout: config.timeout,
+        client: client,
+        now: now,
+      );
+    case 'statuspage':
+      return StatuspageProbe(
+        provider: config.name,
+        endpoint: config.endpoint!,
         timeout: config.timeout,
         client: client,
         now: now,

@@ -180,6 +180,7 @@ Without a services file (and without `SERVICES_CONFIG`) the server falls back to
 |---|---|---|
 | `stripe` | Authenticated `GET /v1/balance` (read-only). | `STRIPE_API_KEY` or `STRIPE_SECRET_KEY` in `config.json` (test-mode key) |
 | `http` | Plain `GET` of `endpoint`. Success is any 2xx, or exactly `expectedStatus` when set. | `endpoint`; no key |
+| `statuspage` | `GET` of a provider's public Atlassian Statuspage summary. Success only while it reports `status.indicator` `none`; an incident or maintenance fails as **Provider incident** with the page's own description (e.g. `major: Partial System Outage`). This catches outages the provider has declared even when its API still answers. | `endpoint`, the full `/api/v2/status.json` URL (e.g. `https://www.issquareup.com/api/v2/status.json`; GitHub, Shopify, Twilio and Discord work the same way); no key |
 
 The example file monitors three keyless public APIs alongside Stripe, chosen because they are free, read-only and need no signup:
 
@@ -197,8 +198,8 @@ These are third-party sites: keep intervals at 60 s or more to be polite, and ex
 |---|---|---|---|
 | `name` | yes | | Unique service name, used in the API, alerts and logs. |
 | `displayName` | no | `name` capitalised | Friendly title on the dashboard, up to 40 characters (for example `GitHub`). `name` stays the key in the API, alerts and logs. |
-| `type` | yes | | Probe type: `stripe` or `http`. |
-| `endpoint` | `http`: yes | the probe's own | The probed http(s) URL. |
+| `type` | yes | | Probe type: `stripe`, `http` or `statuspage`. |
+| `endpoint` | `http`, `statuspage`: yes | the probe's own | The probed http(s) URL. |
 | `expectedStatus` | no | any 2xx | Exact status that counts as success (`http` only), 100 to 599. |
 | `intervalSeconds` | no | 60 | Seconds between probes. |
 | `timeoutSeconds` | no | 10 | Per-request timeout. |
@@ -236,7 +237,7 @@ then point the app at it: `flutter run -d chrome --dart-define=API_BASE_URL=http
 | DNS failure | a `.invalid` hostname | Error `connection` |
 | Expired certificate | `expired.badssl.com` | Error `tls` |
 
-The failure type is shown on each card as a chip (Timeout, Connection / DNS, TLS / certificate, HTTP 4xx, HTTP 5xx, Other; tap or hover for a plain-language explanation), in the detail screen as a per-type count for the selected range, and in the server log (`FAIL ... http5xx: HTTP 503`). The API exposes it as `errorKind` on each probe. Nothing in this file ever recovers, so to see a **recovery** message use `dart run bin/drill.dart` (see [Testing the alert pipeline](#testing-the-alert-pipeline)), or give a flaky service a short `windowMinutes`. Set `NTFY_TOPIC` first to get the alerts on your phone.
+The failure type is shown on each card as a chip (Timeout, Connection / DNS, TLS / certificate, HTTP 4xx, HTTP 5xx, Provider incident, Other; tap or hover for a plain-language explanation), in the detail screen as a per-type count for the selected range, and in the server log (`FAIL ... http5xx: HTTP 503`). The API exposes it as `errorKind` on each probe. Nothing in this file ever recovers, so to see a **recovery** message use `dart run bin/drill.dart` (see [Testing the alert pipeline](#testing-the-alert-pipeline)), or give a flaky service a short `windowMinutes`. Set `NTFY_TOPIC` first to get the alerts on your phone.
 
 ## Notifications in the dashboard
 

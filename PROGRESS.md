@@ -72,6 +72,7 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 | Task | Status | Issue |
 |---|---|---|
 | Add second and third API | ✅ | Generic `HttpProbe` (`type: "http"`) with GitHub, Frankfurter and httpbin in the example config: [#27](https://github.com/cr2551/api-dashboard/issues/27) |
+| Provider-reported status (status pages) | ✅ | New `statuspage` probe type reads a provider's public `/api/v2/status.json` (no key) and fails as `reported` ("Provider incident" chip) while an incident is declared; Square's status page is in the example config. Branch `feat/statuspage-probe` |
 | Make thresholds configurable per service | ✅ | p95, uptime, window, min samples and debounce per service: [#29](https://github.com/cr2551/api-dashboard/issues/29) |
 | Judge p95 only with enough samples | ✅ | `minLatencySamples` (off by default, 20 in the example config): one slow probe no longer opens a latency breach on a fresh window, as in the case-study re-run; follow-up from [docs/case-studies.md](docs/case-studies.md#what-to-change). Branch `feat/p95-min-samples` |
 | Config file (YAML/JSON) for services | ✅ | Schema, validating loader, `services.example.json` ([#26](https://github.com/cr2551/api-dashboard/issues/26)); `serve.dart` and `monitor.dart` run one monitor per service ([#28](https://github.com/cr2551/api-dashboard/issues/28)) |

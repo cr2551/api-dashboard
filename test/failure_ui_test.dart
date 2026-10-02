@@ -82,6 +82,11 @@ void main() {
       }
     });
 
+    test('reported is a provider incident', () {
+      expect(FailureKind.parse('reported'), FailureKind.reported);
+      expect(FailureKind.reported.label, 'Provider incident');
+    });
+
     test('null stays null and unknown names become other', () {
       expect(FailureKind.parse(null), isNull);
       expect(FailureKind.parse('quantum-glitch'), FailureKind.other);

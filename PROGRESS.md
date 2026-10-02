@@ -63,6 +63,7 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 | Alert-sending function | ✅ | `NtfyAlerter` ([#22](https://github.com/cr2551/api-dashboard/issues/22), [PR #38](https://github.com/cr2551/api-dashboard/pull/38)) next to the console alerter ([#9](https://github.com/cr2551/api-dashboard/issues/9)) |
 | Wire breach detection to alert trigger | ✅ | `Monitor` alerts only when a breach opens: [#23](https://github.com/cr2551/api-dashboard/issues/23) |
 | Recovery notification | ✅ | One message per resolved breach with its duration: [#24](https://github.com/cr2551/api-dashboard/issues/24) |
+| Alert says whether the service is already back | ✅ | Breach messages end with `(last probe OK)` or `(last probe failed)`; follow-up from [docs/case-studies.md](docs/case-studies.md#what-to-change). Branch `feat/alert-last-probe` |
 | Test full pipeline with a deliberate false breach | ✅ | `test/pipeline_test.dart` (probe to ntfy, faked network) and `dart run bin/drill.dart`. Drill run 2026-09-30 against a local fake endpoint: 1 alert when it broke, silence while it stayed down, 1 recovery after 7s. Console only; the live ntfy push still needs a run with `NTFY_TOPIC` set: [#25](https://github.com/cr2551/api-dashboard/issues/25) |
 
 ## Phase 6: Expand coverage
@@ -96,7 +97,7 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 
 | Component | Issues |
 |---|---|
-| backend | Threshold follow-ups from [docs/case-studies.md](docs/case-studies.md#what-to-change): one failed probe always opens a ~1 hour uptime breach under the example thresholds, alerts do not say whether the service is already back, and p95 is judged on the single slowest probe until 20 samples. No issue yet. |
+| backend | Threshold follow-ups from [docs/case-studies.md](docs/case-studies.md#what-to-change): one failed probe always opens a ~1 hour uptime breach under the example thresholds, and p95 is judged on the single slowest probe until 20 samples. No issue yet. |
 | backend | Follow-up to [#25](https://github.com/cr2551/api-dashboard/issues/25): one live ntfy push. Run `dart run bin/drill.dart` with `NTFY_TOPIC` set and confirm the alert and the recovery arrive on a phone, then put the same topic in `deploy/.env` so the deployed monitor alerts too. |
 | frontend | [#2](https://github.com/cr2551/api-dashboard/issues/2) leftover: branch `feat/dashboard-gui` has two unmerged commits (an actionable "cannot reach the backend" error in `lib/data/api_client.dart`, and step-by-step run instructions in the README). It is far behind `main`, so redo or rebase them, then close #2. |
 

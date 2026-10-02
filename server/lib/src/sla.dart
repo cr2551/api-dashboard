@@ -36,6 +36,9 @@ class SlaBreach {
 
   final String provider;
   final SlaBreachType type;
+
+  /// What was breached, ending with whether the newest probe in the window
+  /// succeeded, e.g. `uptime 87.50% is below 99.0% (last probe OK)`.
   final String message;
 
   @override
@@ -72,8 +75,12 @@ bool _heldForPreviousEvaluations(
 }
 
 List<SlaBreach> _evaluate(SlaPolicy policy, List<ProbeResult> results) {
-  if (results.length < policy.minSamples) return const [];
+  if (results.isEmpty || results.length < policy.minSamples) return const [];
   final breaches = <SlaBreach>[];
+
+  // A breach is judged over the whole window, so the service can already be
+  // back when it opens. Say so, or the alert reads like an ongoing outage.
+  final now = results.last.success ? 'last probe OK' : 'last probe failed';
 
   final uptime = uptimePercent(results)!;
   if (uptime < policy.minUptimePercent) {
@@ -83,7 +90,7 @@ List<SlaBreach> _evaluate(SlaPolicy policy, List<ProbeResult> results) {
         type: SlaBreachType.uptime,
         message:
             'uptime ${uptime.toStringAsFixed(2)}% is below '
-            '${policy.minUptimePercent}%',
+            '${policy.minUptimePercent}% ($now)',
       ),
     );
   }
@@ -96,7 +103,7 @@ List<SlaBreach> _evaluate(SlaPolicy policy, List<ProbeResult> results) {
         type: SlaBreachType.latency,
         message:
             'p95 latency ${p95.inMilliseconds}ms exceeds '
-            '${policy.maxP95Latency.inMilliseconds}ms',
+            '${policy.maxP95Latency.inMilliseconds}ms ($now)',
       ),
     );
   }

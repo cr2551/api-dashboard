@@ -67,6 +67,46 @@ void main() {
     expect(detectBreaches(policy, r).single.type, SlaBreachType.uptime);
   });
 
+  group('message says whether the service is up right now', () {
+    test('uptime breach after the service came back', () {
+      final r = [
+        for (var i = 0; i < 8; i++) probe(100),
+        probe(100, ok: false),
+        probe(100, ok: false),
+        probe(100),
+      ];
+      expect(
+        detectBreaches(policy, r).single.message,
+        'uptime 81.82% is below 90.0% (last probe OK)',
+      );
+    });
+
+    test('uptime breach while the service is still down', () {
+      final r = [
+        for (var i = 0; i < 8; i++) probe(100),
+        probe(100, ok: false),
+        probe(100, ok: false),
+      ];
+      expect(
+        detectBreaches(policy, r).single.message,
+        'uptime 80.00% is below 90.0% (last probe failed)',
+      );
+    });
+
+    test('latency breach', () {
+      final r = [for (var i = 0; i < 10; i++) probe(900)];
+      expect(
+        detectBreaches(policy, r).single.message,
+        'p95 latency 900ms exceeds 500ms (last probe OK)',
+      );
+    });
+
+    test('an empty window is not judged even with minSamples 0', () {
+      const p = SlaPolicy(provider: 'stripe', minSamples: 0);
+      expect(detectBreaches(p, const []), isEmpty);
+    });
+  });
+
   group('consecutiveFailures debounce', () {
     const debounced = SlaPolicy(
       provider: 'stripe',

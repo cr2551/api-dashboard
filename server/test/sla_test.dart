@@ -107,6 +107,60 @@ void main() {
     });
   });
 
+  group('minLatencySamples', () {
+    const guarded = SlaPolicy(
+      provider: 'stripe',
+      maxP95Latency: Duration(milliseconds: 1500),
+      minUptimePercent: 90,
+      minSamples: 5,
+      minLatencySamples: 20,
+    );
+
+    // Case study 1 re-run: one 7183 ms probe among normal ones.
+    List<ProbeResult> oneSlowAmong(int total) => [
+      for (var i = 0; i < 8; i++) probe(170),
+      probe(7183),
+      for (var i = 9; i < total; i++) probe(170),
+    ];
+
+    test('without it, one slow probe in 9 opens a latency breach', () {
+      const unguarded = SlaPolicy(
+        provider: 'stripe',
+        maxP95Latency: Duration(milliseconds: 1500),
+        minSamples: 5,
+      );
+      final b = detectBreaches(unguarded, oneSlowAmong(9)).single;
+      expect(b.type, SlaBreachType.latency);
+    });
+
+    test('with it, p95 is not judged below that many probes', () {
+      expect(detectBreaches(guarded, oneSlowAmong(19)), isEmpty);
+    });
+
+    test('at that many probes one slow probe no longer decides p95', () {
+      expect(detectBreaches(guarded, oneSlowAmong(20)), isEmpty);
+    });
+
+    test('sustained slowness still breaches once there is enough data', () {
+      final r = [for (var i = 0; i < 20; i++) probe(2000)];
+      expect(detectBreaches(guarded, r).single.type, SlaBreachType.latency);
+    });
+
+    test('only successful probes count towards it', () {
+      final r = [for (var i = 0; i < 19; i++) probe(2000), probe(1, ok: false)];
+      // 20 probes but 19 successes: latency is not judged yet.
+      expect(
+        detectBreaches(guarded, r).map((b) => b.type),
+        isNot(contains(SlaBreachType.latency)),
+      );
+    });
+
+    test('uptime is still judged from minSamples', () {
+      final r = [for (var i = 0; i < 4; i++) probe(100), probe(100, ok: false)];
+      expect(detectBreaches(guarded, r).single.type, SlaBreachType.uptime);
+    });
+  });
+
   group('consecutiveFailures debounce', () {
     const debounced = SlaPolicy(
       provider: 'stripe',

@@ -203,6 +203,7 @@ These are third-party sites: keep intervals at 60 s or more to be polite, and ex
 | `sla.minUptimePercent` | no | 99.9 | Uptime floor, 0 to 100. |
 | `sla.windowMinutes` | no | 60 | Rolling window the SLA is judged over. |
 | `sla.minSamples` | no | 1 | Fewer probes than this in the window are not judged. |
+| `sla.minLatencySamples` | no | off | Fewer **successful** probes than this in the window: p95 latency is not judged (uptime still is). Nearest-rank p95 of fewer than 20 values is the single slowest probe, so `20` stops one slow probe from opening a latency breach; the example file uses 20. |
 | `sla.consecutiveFailures` | no | 1 | A breach must hold this many evaluations in a row before alerting. |
 
 `loadServicesConfig(path)` validates the file. Unknown fields are rejected so a typo cannot silently fall back to a default, and errors name the exact field, e.g. `Invalid config at services[1].sla.minUptimePercent: must be a number between 0 and 100`.

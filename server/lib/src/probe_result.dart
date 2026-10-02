@@ -15,6 +15,9 @@ enum ProbeErrorKind {
   /// The provider answered with a 5xx status (the provider is failing).
   http5xx,
 
+  /// The provider's own status page reports an incident.
+  reported,
+
   /// Any other non-2xx status or unexpected error.
   other,
 }

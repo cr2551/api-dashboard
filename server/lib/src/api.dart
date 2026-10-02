@@ -15,6 +15,14 @@ const _cors = {
   'access-control-allow-headers': 'content-type, authorization',
 };
 
+/// `degraded` means the last probe succeeded but the window still breaches
+/// the SLA, so the card does not say "Operational" next to a breach.
+String _state(ProbeResult? last, List<SlaBreach> breaches) {
+  if (last == null) return 'unknown';
+  if (!last.success) return 'down';
+  return breaches.isEmpty ? 'up' : 'degraded';
+}
+
 /// JSON API for the dashboard:
 ///
 /// * `GET /api/status`: one entry per policy (state, latest probe, uptime,
@@ -55,10 +63,11 @@ Handler apiHandler({
       since: now.subtract(policy.window),
     );
     final last = results.isEmpty ? null : results.last;
+    final breaches = detectBreaches(policy, results);
     return {
       'provider': policy.provider,
       'displayName': displayNames[policy.provider],
-      'state': last == null ? 'unknown' : (last.success ? 'up' : 'down'),
+      'state': _state(last, breaches),
       'lastProbe': last == null ? null : _probeJson(last),
       'windowMinutes': policy.window.inMinutes,
       'sampleCount': results.length,
@@ -67,8 +76,7 @@ Handler apiHandler({
       'p95LatencyMs': p95Latency(results)?.inMilliseconds,
       'settings': _settingsJson(policy, serviceConfigs[policy.provider]),
       'breaches': [
-        for (final b in detectBreaches(policy, results))
-          {'type': b.type.name, 'message': b.message},
+        for (final b in breaches) {'type': b.type.name, 'message': b.message},
       ],
     };
   }

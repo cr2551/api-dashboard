@@ -95,6 +95,30 @@ void main() {
     );
   });
 
+  testWidgets('shows a degraded state when breached but the last probe is OK', (
+    tester,
+  ) async {
+    final body = snapshot([
+      service(
+        state: 'degraded',
+        breaches: [
+          {'type': 'uptime', 'message': 'uptime 80.00% is below 99.9%'},
+        ],
+      ),
+    ]);
+    await tester.pumpWidget(
+      app(clientFor((_) async => http.Response(body, 200))),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Degraded'), findsOneWidget);
+    expect(find.text('Operational'), findsNothing);
+    expect(
+      find.text('SLA breach: uptime 80.00% is below 99.9%'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('shows a no-data state', (tester) async {
     await tester.pumpWidget(
       app(

@@ -44,6 +44,19 @@
       }
     },
     {
+      "name": "square-status",
+      "displayName": "Square (status page)",
+      "type": "statuspage",
+      "endpoint": "https://www.issquareup.com/api/v2/status.json",
+      "intervalSeconds": 120,
+      "sla": {
+        "maxP95LatencyMs": 3000,
+        "minUptimePercent": 99,
+        "minSamples": 5,
+        "minLatencySamples": 20
+      }
+    },
+    {
       "name": "httpbin",
       "displayName": "httpbin",
       "type": "http",

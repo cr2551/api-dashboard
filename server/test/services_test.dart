@@ -17,7 +17,7 @@ ServiceConfig svc(
 }) => ServiceConfig(
   name: name,
   type: type,
-  endpoint: type == 'http' ? Uri.parse(endpoint) : null,
+  endpoint: type == 'stripe' ? null : Uri.parse(endpoint),
   expectedStatus: expectedStatus,
   interval: Duration(seconds: intervalSeconds),
   timeout: const Duration(seconds: 5),
@@ -32,7 +32,11 @@ class _Recorder implements Alerter {
   void alert(SlaBreach breach) => breaches.add(breach);
 
   @override
-  void recovered(SlaBreach breach, Duration duration) => recoveries.add(breach);
+  void recovered(
+    SlaBreach breach,
+    Duration duration, {
+    DateTime? lastFailure,
+  }) => recoveries.add(breach);
 }
 
 void main() {
@@ -142,6 +146,24 @@ void main() {
       expect(probe.provider, 'gh');
       expect(probe.endpoint.toString(), 'https://svc.test/health');
       expect(probe.expectedStatus, 204);
+      expect(probe.headers, isEmpty);
+    });
+
+    test('statuspage uses the endpoint and timeout and needs no secrets', () {
+      final probe = buildProbe(
+        svc(
+          'square-status',
+          type: 'statuspage',
+          endpoint: 'https://www.issquareup.com/api/v2/status.json',
+        ),
+        {},
+      ) as StatuspageProbe;
+      expect(probe.provider, 'square-status');
+      expect(
+        probe.endpoint.toString(),
+        'https://www.issquareup.com/api/v2/status.json',
+      );
+      expect(probe.timeout, const Duration(seconds: 5));
       expect(probe.headers, isEmpty);
     });
   });

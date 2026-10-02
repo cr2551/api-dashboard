@@ -58,10 +58,15 @@ class NtfyAlerter implements Alerter {
   );
 
   @override
-  void recovered(SlaBreach breach, Duration duration) => _send(
+  void recovered(
+    SlaBreach breach,
+    Duration duration, {
+    DateTime? lastFailure,
+  }) => _send(
     title: 'SLA recovered: ${breach.provider} (${breach.type.name})',
     body:
-        'Back within SLA after ${formatDuration(duration)} '
+        'Back within SLA after ${formatDuration(duration)}'
+        '${lastFailureSuffix(lastFailure)} '
         '(was: ${breach.message})\n'
         'at ${_now().toUtc().toIso8601String()}',
     priority: 'default',
@@ -131,9 +136,9 @@ class MultiAlerter implements Alerter {
   }
 
   @override
-  void recovered(SlaBreach breach, Duration duration) {
+  void recovered(SlaBreach breach, Duration duration, {DateTime? lastFailure}) {
     for (final a in alerters) {
-      a.recovered(breach, duration);
+      a.recovered(breach, duration, lastFailure: lastFailure);
     }
   }
 }

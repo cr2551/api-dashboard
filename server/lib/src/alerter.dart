@@ -4,8 +4,19 @@ import 'sla.dart';
 abstract interface class Alerter {
   void alert(SlaBreach breach);
 
-  /// [breach] is over; it lasted [duration].
-  void recovered(SlaBreach breach, Duration duration);
+  /// [breach] is over; it lasted [duration]. [lastFailure] is when the
+  /// newest failed probe behind an uptime breach ran, so the message can
+  /// report the outage rather than the window; null when unknown.
+  void recovered(SlaBreach breach, Duration duration, {DateTime? lastFailure});
+}
+
+/// `, last failure 21:04:53 UTC`, or an empty string when [lastFailure] is
+/// null.
+String lastFailureSuffix(DateTime? lastFailure) {
+  if (lastFailure == null) return '';
+  final t = lastFailure.toUtc();
+  String two(int n) => n.toString().padLeft(2, '0');
+  return ', last failure ${two(t.hour)}:${two(t.minute)}:${two(t.second)} UTC';
 }
 
 /// Human-readable duration such as `45s`, `12m 5s` or `2h 3m`.
@@ -31,8 +42,12 @@ class ConsoleAlerter implements Alerter {
   );
 
   @override
-  void recovered(SlaBreach breach, Duration duration) => _sink(
+  void recovered(
+    SlaBreach breach,
+    Duration duration, {
+    DateTime? lastFailure,
+  }) => _sink(
     '[SLA RECOVERED] ${breach.provider} (${breach.type.name}) after '
-    '${formatDuration(duration)}',
+    '${formatDuration(duration)}${lastFailureSuffix(lastFailure)}',
   );
 }

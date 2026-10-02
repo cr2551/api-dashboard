@@ -9,6 +9,7 @@ class SlaPolicy {
     this.minUptimePercent = 99.9,
     this.window = const Duration(hours: 1),
     this.minSamples = 1,
+    this.minLatencySamples,
     this.consecutiveFailures = 1,
   }) : assert(consecutiveFailures >= 1);
 
@@ -19,6 +20,13 @@ class SlaPolicy {
 
   /// Fewer probes than this in the window is too little data to judge.
   final int minSamples;
+
+  /// Fewer successful probes than this in the window is too little data to
+  /// judge p95 latency; null adds no limit beyond [minSamples]. Nearest-rank
+  /// p95 of fewer
+  /// than 20 values is the single slowest one, so 20 keeps one slow probe
+  /// from opening a latency breach.
+  final int? minLatencySamples;
 
   /// A breach is only reported once it has shown up in this many evaluations
   /// in a row (one evaluation per probe). 1 reports every breach immediately.
@@ -36,6 +44,9 @@ class SlaBreach {
 
   final String provider;
   final SlaBreachType type;
+
+  /// What was breached, ending with whether the newest probe in the window
+  /// succeeded, e.g. `uptime 87.50% is below 99.0% (last probe OK)`.
   final String message;
 
   @override
@@ -72,8 +83,12 @@ bool _heldForPreviousEvaluations(
 }
 
 List<SlaBreach> _evaluate(SlaPolicy policy, List<ProbeResult> results) {
-  if (results.length < policy.minSamples) return const [];
+  if (results.isEmpty || results.length < policy.minSamples) return const [];
   final breaches = <SlaBreach>[];
+
+  // A breach is judged over the whole window, so the service can already be
+  // back when it opens. Say so, or the alert reads like an ongoing outage.
+  final now = results.last.success ? 'last probe OK' : 'last probe failed';
 
   final uptime = uptimePercent(results)!;
   if (uptime < policy.minUptimePercent) {
@@ -83,12 +98,15 @@ List<SlaBreach> _evaluate(SlaPolicy policy, List<ProbeResult> results) {
         type: SlaBreachType.uptime,
         message:
             'uptime ${uptime.toStringAsFixed(2)}% is below '
-            '${policy.minUptimePercent}%',
+            '${policy.minUptimePercent}% ($now)',
       ),
     );
   }
 
-  final p95 = p95Latency(results);
+  final minLatency = policy.minLatencySamples;
+  final tooFewForP95 =
+      minLatency != null && results.where((r) => r.success).length < minLatency;
+  final p95 = tooFewForP95 ? null : p95Latency(results);
   if (p95 != null && p95 > policy.maxP95Latency) {
     breaches.add(
       SlaBreach(
@@ -96,7 +114,7 @@ List<SlaBreach> _evaluate(SlaPolicy policy, List<ProbeResult> results) {
         type: SlaBreachType.latency,
         message:
             'p95 latency ${p95.inMilliseconds}ms exceeds '
-            '${policy.maxP95Latency.inMilliseconds}ms',
+            '${policy.maxP95Latency.inMilliseconds}ms ($now)',
       ),
     );
   }

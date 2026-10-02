@@ -21,7 +21,12 @@ class ConfigException implements Exception {
 ///   `config.json`).
 /// * `http`: a plain `GET` of any public [ServiceConfig.endpoint], judged by
 ///   its status code.
-const supportedServiceTypes = {'stripe', 'http'};
+/// * `statuspage`: a provider's public Statuspage `/api/v2/status.json` at
+///   [ServiceConfig.endpoint], judged by the status it reports.
+const supportedServiceTypes = {'stripe', 'http', 'statuspage'};
+
+/// Types that have no default URL, so `endpoint` is required.
+const _needsEndpoint = {'http', 'statuspage'};
 
 /// One monitored service: what to probe, how often, and its SLA.
 ///
@@ -46,7 +51,8 @@ class ServiceConfig {
   /// still the key used in the API, alerts and logs.
   final String? displayName;
 
-  /// Required for type `http`; overrides the default for other types.
+  /// Required for types `http` and `statuspage`; overrides the default for
+  /// `stripe`.
   final Uri? endpoint;
 
   /// Exact status that counts as success (type `http` only); null means any
@@ -143,8 +149,8 @@ ServiceConfig _parseService(Object? json, String at) {
         endpoint.host.isEmpty) {
       throw ConfigException('$at.endpoint', 'must be an http(s) URL');
     }
-  } else if (type == 'http') {
-    throw ConfigException('$at.endpoint', 'required for type "http"');
+  } else if (_needsEndpoint.contains(type)) {
+    throw ConfigException('$at.endpoint', 'required for type "$type"');
   }
 
   int? expectedStatus;
@@ -190,6 +196,7 @@ SlaPolicy _parsePolicy(String provider, Object? json, String at) {
     'minUptimePercent',
     'windowMinutes',
     'minSamples',
+    'minLatencySamples',
     'consecutiveFailures',
   }, at);
 
@@ -229,6 +236,9 @@ SlaPolicy _parsePolicy(String provider, Object? json, String at) {
       at,
       fallback: defaults.minSamples,
     ),
+    minLatencySamples: map.containsKey('minLatencySamples')
+        ? _positiveInt(map, 'minLatencySamples', at, fallback: 0)
+        : null,
     consecutiveFailures: _positiveInt(
       map,
       'consecutiveFailures',

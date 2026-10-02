@@ -156,6 +156,68 @@ void main() {
       expect(recoveries, [const Duration(hours: 1, minutes: 59)]);
     });
 
+    test('the recovery says when the last failure happened', () async {
+      final t = DateTime.utc(2026, 1, 1, 12);
+      final later = DateTime.utc(2026, 1, 1, 14);
+      final recorder = _Recorder(alerts);
+      final lines = <String>[];
+      final m = Monitor(
+        probe: FakeProbe([
+          at(t),
+          at(t.add(const Duration(minutes: 1)), ok: false),
+          at(t.add(const Duration(minutes: 2)), ok: false), // last failure
+          at(t.add(const Duration(minutes: 3))),
+          at(later), // both failures left the window: resolved
+        ]),
+        store: store,
+        policy: policy,
+        alerter: recorder,
+        logger: Logger(sink: lines.add, now: () => clock),
+        now: () => clock,
+      );
+      for (final time in [
+        t,
+        t.add(const Duration(minutes: 1)),
+        t.add(const Duration(minutes: 2)),
+        t.add(const Duration(minutes: 3)),
+        later,
+      ]) {
+        clock = time;
+        await m.runOnce();
+      }
+      expect(recorder.lastFailures, [t.add(const Duration(minutes: 2))]);
+      expect(lines.any((l) => l.contains('last failure 12:02:00 UTC')), isTrue);
+    });
+
+    test('a latency recovery has no last failure', () async {
+      final t = DateTime.utc(2026, 1, 1, 12);
+      final later = DateTime.utc(2026, 1, 1, 14);
+      final recorder = _Recorder(alerts);
+      ProbeResult slow(DateTime time) => ProbeResult(
+        provider: 'stripe',
+        timestamp: time,
+        latency: const Duration(seconds: 2),
+        success: true,
+      );
+      final m = Monitor(
+        probe: FakeProbe([
+          slow(t),
+          slow(t.add(const Duration(minutes: 1))), // latency breach opens
+          at(later), // resolved
+        ]),
+        store: store,
+        policy: policy,
+        alerter: recorder,
+        now: () => clock,
+      );
+      for (final time in [t, t.add(const Duration(minutes: 1)), later]) {
+        clock = time;
+        await m.runOnce();
+      }
+      expect(alerts.single.type, SlaBreachType.latency);
+      expect(recorder.lastFailures, [null]);
+    });
+
     test('a failing recovery alert is logged, not thrown', () async {
       final t = DateTime.utc(2026, 1, 1, 12);
       final later = DateTime.utc(2026, 1, 1, 14);
@@ -325,6 +387,24 @@ void main() {
       expect(lines.single, '[SLA RECOVERED] stripe (latency) after 12m 5s');
     });
 
+    test('adds the last failure time to a recovery line', () {
+      final lines = <String>[];
+      ConsoleAlerter(lines.add).recovered(
+        const SlaBreach(
+          provider: 'stripe',
+          type: SlaBreachType.uptime,
+          message: 'uptime too low',
+        ),
+        const Duration(minutes: 59),
+        lastFailure: DateTime.utc(2026, 10, 1, 21, 4, 53),
+      );
+      expect(
+        lines.single,
+        '[SLA RECOVERED] stripe (uptime) after 59m 0s, '
+        'last failure 21:04:53 UTC',
+      );
+    });
+
     test('formatDuration picks a readable unit', () {
       expect(formatDuration(const Duration(seconds: 45)), '45s');
       expect(formatDuration(const Duration(minutes: 12, seconds: 5)), '12m 5s');
@@ -338,8 +418,11 @@ class _RecoveryThrowing implements Alerter {
   void alert(SlaBreach breach) {}
 
   @override
-  void recovered(SlaBreach breach, Duration duration) =>
-      throw StateError('channel down');
+  void recovered(
+    SlaBreach breach,
+    Duration duration, {
+    DateTime? lastFailure,
+  }) => throw StateError('channel down');
 }
 
 class _Throwing implements Alerter {
@@ -347,8 +430,11 @@ class _Throwing implements Alerter {
   void alert(SlaBreach breach) => throw StateError('channel down');
 
   @override
-  void recovered(SlaBreach breach, Duration duration) =>
-      throw StateError('channel down');
+  void recovered(
+    SlaBreach breach,
+    Duration duration, {
+    DateTime? lastFailure,
+  }) => throw StateError('channel down');
 }
 
 class _Recorder implements Alerter {
@@ -356,11 +442,14 @@ class _Recorder implements Alerter {
     : recoveries = recoveries ?? [];
   final List<SlaBreach> breaches;
   final List<Duration> recoveries;
+  final List<DateTime?> lastFailures = [];
 
   @override
   void alert(SlaBreach breach) => breaches.add(breach);
 
   @override
-  void recovered(SlaBreach breach, Duration duration) =>
-      recoveries.add(duration);
+  void recovered(SlaBreach breach, Duration duration, {DateTime? lastFailure}) {
+    recoveries.add(duration);
+    lastFailures.add(lastFailure);
+  }
 }

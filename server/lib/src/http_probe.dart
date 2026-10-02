@@ -6,6 +6,9 @@ import 'package:http/http.dart' as http;
 import 'probe.dart';
 import 'probe_result.dart';
 
+/// Why [HttpProbe.judge] rejected a response.
+typedef ProbeFailure = ({String error, ProbeErrorKind kind});
+
 /// Probes any HTTP endpoint with a `GET` and judges the response status.
 ///
 /// A response is a success when its status equals [expectedStatus], or, when
@@ -76,6 +79,11 @@ class HttpProbe implements Probe {
       ? code >= 200 && code < 300
       : code == expectedStatus;
 
+  /// Judges a response whose status already counts as a success. Returns
+  /// null when it is fine, or why it failed. The default accepts every such
+  /// response; subclasses override it to read the body.
+  ProbeFailure? judge(http.Response response) => null;
+
   Future<ProbeResult> _attempt(DateTime timestamp) async {
     final watch = _stopwatch()..start();
     try {
@@ -84,15 +92,17 @@ class HttpProbe implements Probe {
           .timeout(timeout);
       watch.stop();
       final code = response.statusCode;
-      final ok = _isSuccess(code);
+      final failure = _isSuccess(code)
+          ? judge(response)
+          : (error: 'HTTP $code', kind: _classifyStatus(code));
       return ProbeResult(
         provider: provider,
         timestamp: timestamp,
         latency: watch.elapsed,
-        success: ok,
+        success: failure == null,
         statusCode: code,
-        error: ok ? null : 'HTTP $code',
-        errorKind: ok ? null : _classifyStatus(code),
+        error: failure?.error,
+        errorKind: failure?.kind,
       );
     } catch (e) {
       watch.stop();

@@ -4,16 +4,19 @@ import '../data/models.dart';
 import 'failure_chip.dart';
 
 const _upColor = Color(0xFF2E9E5B);
+const _degradedColor = Color(0xFFD99A1E);
 const _downColor = Color(0xFFD64545);
 
 Color stateColor(ServiceState state, ColorScheme scheme) => switch (state) {
   ServiceState.up => _upColor,
+  ServiceState.degraded => _degradedColor,
   ServiceState.down => _downColor,
   ServiceState.unknown => scheme.outline,
 };
 
 String stateLabel(ServiceState state) => switch (state) {
   ServiceState.up => 'Operational',
+  ServiceState.degraded => 'Degraded',
   ServiceState.down => 'Down',
   ServiceState.unknown => 'No data',
 };

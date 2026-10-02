@@ -75,6 +75,8 @@ Without state, a 2-hour outage probed every 30 seconds would send 240 alerts. `B
 | breached | not breached | **resolved**: recovery message with the duration |
 
 - *Trade-off:* the state is **in memory**. After a restart a breach that is still active is alerted again, and its duration starts from the restart. Persisting it is a possible follow-up.
+- Every breach message ends with whether the newest probe succeeded, for example `uptime 87.50% is below 99.0% (last probe OK)`. A breach is judged over the whole window, so the service is often already back when the alert opens; without this the alert reads like an ongoing outage.
+- An uptime recovery also says when the last failed probe ran, for example `after 59m 0s, last failure 21:04:53 UTC`. An uptime breach only resolves once its failures leave the window, so the duration mostly measures the window; the last failure time is when the outage actually ended.
 
 ### Alerting must never stop monitoring
 Storage, evaluation and alert-sending errors are logged and the cycle carries on. A broken notification channel (for example ntfy being down) cannot stop probing or the dashboard.
@@ -115,6 +117,8 @@ flutter test
    Point the app at a different backend with `--dart-define=API_BASE_URL=http://host:port`.
 
    If the backend has `API_TOKEN` set, the app shows an **Enter access token** button on the 401 error (and a key icon in the app bar to change it later). For development you can instead pass `--dart-define=API_TOKEN=<token>`. The token is kept in memory only, so the app asks again after a restart.
+
+Each service card shows one of four states: **Operational** (last probe OK, no breach), **Degraded** (last probe OK, but the SLA window is still breached, for example right after a short outage), **Down** (last probe failed) or **No data** (no probes in the window).
 
 The backend also accepts `PORT`, `HOST` (default `127.0.0.1`), `PROBE_INTERVAL_SECONDS` (default 30) and `DB_PATH` (default `probes.db`).
 ## Alert channel: ntfy.sh
@@ -176,6 +180,7 @@ Without a services file (and without `SERVICES_CONFIG`) the server falls back to
 |---|---|---|
 | `stripe` | Authenticated `GET /v1/balance` (read-only). | `STRIPE_API_KEY` or `STRIPE_SECRET_KEY` in `config.json` (test-mode key) |
 | `http` | Plain `GET` of `endpoint`. Success is any 2xx, or exactly `expectedStatus` when set. | `endpoint`; no key |
+| `statuspage` | `GET` of a provider's public Atlassian Statuspage summary. Success only while it reports `status.indicator` `none`; an incident or maintenance fails as **Provider incident** with the page's own description (e.g. `major: Partial System Outage`). This catches outages the provider has declared even when its API still answers. | `endpoint`, the full `/api/v2/status.json` URL (e.g. `https://www.issquareup.com/api/v2/status.json`; GitHub, Shopify, Twilio and Discord work the same way); no key |
 
 The example file monitors three keyless public APIs alongside Stripe, chosen because they are free, read-only and need no signup:
 
@@ -193,8 +198,8 @@ These are third-party sites: keep intervals at 60 s or more to be polite, and ex
 |---|---|---|---|
 | `name` | yes | | Unique service name, used in the API, alerts and logs. |
 | `displayName` | no | `name` capitalised | Friendly title on the dashboard, up to 40 characters (for example `GitHub`). `name` stays the key in the API, alerts and logs. |
-| `type` | yes | | Probe type: `stripe` or `http`. |
-| `endpoint` | `http`: yes | the probe's own | The probed http(s) URL. |
+| `type` | yes | | Probe type: `stripe`, `http` or `statuspage`. |
+| `endpoint` | `http`, `statuspage`: yes | the probe's own | The probed http(s) URL. |
 | `expectedStatus` | no | any 2xx | Exact status that counts as success (`http` only), 100 to 599. |
 | `intervalSeconds` | no | 60 | Seconds between probes. |
 | `timeoutSeconds` | no | 10 | Per-request timeout. |
@@ -202,6 +207,7 @@ These are third-party sites: keep intervals at 60 s or more to be polite, and ex
 | `sla.minUptimePercent` | no | 99.9 | Uptime floor, 0 to 100. |
 | `sla.windowMinutes` | no | 60 | Rolling window the SLA is judged over. |
 | `sla.minSamples` | no | 1 | Fewer probes than this in the window are not judged. |
+| `sla.minLatencySamples` | no | off | Fewer **successful** probes than this in the window: p95 latency is not judged (uptime still is). Nearest-rank p95 of fewer than 20 values is the single slowest probe, so `20` stops one slow probe from opening a latency breach; the example file uses 20. |
 | `sla.consecutiveFailures` | no | 1 | A breach must hold this many evaluations in a row before alerting. |
 
 `loadServicesConfig(path)` validates the file. Unknown fields are rejected so a typo cannot silently fall back to a default, and errors name the exact field, e.g. `Invalid config at services[1].sla.minUptimePercent: must be a number between 0 and 100`.
@@ -231,7 +237,7 @@ then point the app at it: `flutter run -d chrome --dart-define=API_BASE_URL=http
 | DNS failure | a `.invalid` hostname | Error `connection` |
 | Expired certificate | `expired.badssl.com` | Error `tls` |
 
-The failure type is shown on each card as a chip (Timeout, Connection / DNS, TLS / certificate, HTTP 4xx, HTTP 5xx, Other; tap or hover for a plain-language explanation), in the detail screen as a per-type count for the selected range, and in the server log (`FAIL ... http5xx: HTTP 503`). The API exposes it as `errorKind` on each probe. Nothing in this file ever recovers, so to see a **recovery** message use `dart run bin/drill.dart` (see [Testing the alert pipeline](#testing-the-alert-pipeline)), or give a flaky service a short `windowMinutes`. Set `NTFY_TOPIC` first to get the alerts on your phone.
+The failure type is shown on each card as a chip (Timeout, Connection / DNS, TLS / certificate, HTTP 4xx, HTTP 5xx, Provider incident, Other; tap or hover for a plain-language explanation), in the detail screen as a per-type count for the selected range, and in the server log (`FAIL ... http5xx: HTTP 503`). The API exposes it as `errorKind` on each probe. Nothing in this file ever recovers, so to see a **recovery** message use `dart run bin/drill.dart` (see [Testing the alert pipeline](#testing-the-alert-pipeline)), or give a flaky service a short `windowMinutes`. Set `NTFY_TOPIC` first to get the alerts on your phone.
 
 ## Notifications in the dashboard
 

@@ -181,6 +181,19 @@ void main() {
       expect(s['breaches'].single['type'], 'uptime');
     });
 
+    test(
+      'is degraded when the last probe is OK but a breach is open',
+      () async {
+        add(3, 100, ok: false);
+        add(2, 100);
+        add(1, 100);
+        final s = (await getJson('/api/status'))['services'].single;
+        expect(s['state'], 'degraded');
+        expect(s['lastProbe']['statusCode'], 200);
+        expect(s['breaches'].single['type'], 'uptime');
+      },
+    );
+
     test('ignores probes outside the policy window', () async {
       add(120, 100);
       final s = (await getJson('/api/status'))['services'].single;

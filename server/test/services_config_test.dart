@@ -58,10 +58,12 @@ void main() {
             'minUptimePercent': 99,
             'windowMinutes': 30,
             'minSamples': 3,
+            'minLatencySamples': 20,
             'consecutiveFailures': 2,
           },
         }),
       ]).single;
+      expect(s.policy.minLatencySamples, 20);
       expect(s.endpoint, Uri.parse('https://example.com/health'));
       expect(s.interval, const Duration(seconds: 15));
       expect(s.timeout, const Duration(seconds: 5));
@@ -70,6 +72,29 @@ void main() {
       expect(s.policy.window, const Duration(minutes: 30));
       expect(s.policy.minSamples, 3);
       expect(s.policy.consecutiveFailures, 2);
+    });
+
+    test('minLatencySamples is off unless set', () {
+      final s = parse([
+        service({
+          'sla': {'minSamples': 5},
+        }),
+      ]).single;
+      expect(s.policy.minLatencySamples, isNull);
+    });
+
+    test('minLatencySamples must be a whole number of 1 or more', () {
+      expectBadField(
+        {
+          'services': [
+            service({
+              'sla': {'minLatencySamples': 0},
+            }),
+          ],
+        },
+        'services[0].sla.minLatencySamples',
+        '1 or more',
+      );
     });
 
     test('several services keep their own settings', () {
@@ -341,6 +366,51 @@ void main() {
     });
   });
 
+  group('type statuspage', () {
+    test('reads the endpoint', () {
+      final s = parse([
+        service({
+          'name': 'square-status',
+          'type': 'statuspage',
+          'endpoint': 'https://www.issquareup.com/api/v2/status.json',
+        }),
+      ]).single;
+      expect(s.type, 'statuspage');
+      expect(
+        s.endpoint,
+        Uri.parse('https://www.issquareup.com/api/v2/status.json'),
+      );
+    });
+
+    test('the endpoint is required', () {
+      expectBadField(
+        {
+          'services': [
+            {'name': 'square-status', 'type': 'statuspage'},
+          ],
+        },
+        'services[0].endpoint',
+        'required for type "statuspage"',
+      );
+    });
+
+    test('expectedStatus is not supported', () {
+      expectBadField(
+        {
+          'services': [
+            service({
+              'type': 'statuspage',
+              'endpoint': 'https://www.githubstatus.com/api/v2/status.json',
+              'expectedStatus': 200,
+            }),
+          ],
+        },
+        'services[0].expectedStatus',
+        'only supported',
+      );
+    });
+  });
+
   group('loadServicesConfig', () {
     late Directory dir;
     setUp(() => dir = Directory.systemTemp.createTempSync('services_test'));
@@ -404,10 +474,18 @@ void main() {
         'stripe',
         'github',
         'frankfurter',
+        'square-status',
         'httpbin',
       ]);
-      expect(list.map((s) => s.type), ['stripe', 'http', 'http', 'http']);
+      expect(list.map((s) => s.type), [
+        'stripe',
+        'http',
+        'http',
+        'statuspage',
+        'http',
+      ]);
       expect(list.first.policy.consecutiveFailures, 2);
+      expect(list.map((s) => s.policy.minLatencySamples).toSet(), {20});
       // Each service has its own thresholds.
       expect(list.map((s) => s.policy.minUptimePercent).toSet().length, 3);
       expect(list.every((s) => s.type != 'http' || s.endpoint != null), isTrue);

@@ -3,6 +3,7 @@ export 'src/stats.dart';
 export 'src/probe.dart';
 export 'src/http_probe.dart';
 export 'src/stripe_probe.dart';
+export 'src/statuspage_probe.dart';
 export 'src/stored_event.dart';
 export 'src/probe_store.dart';
 export 'src/sla.dart';

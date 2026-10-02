@@ -63,6 +63,8 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 | Alert-sending function | ✅ | `NtfyAlerter` ([#22](https://github.com/cr2551/api-dashboard/issues/22), [PR #38](https://github.com/cr2551/api-dashboard/pull/38)) next to the console alerter ([#9](https://github.com/cr2551/api-dashboard/issues/9)) |
 | Wire breach detection to alert trigger | ✅ | `Monitor` alerts only when a breach opens: [#23](https://github.com/cr2551/api-dashboard/issues/23) |
 | Recovery notification | ✅ | One message per resolved breach with its duration: [#24](https://github.com/cr2551/api-dashboard/issues/24) |
+| Alert says whether the service is already back | ✅ | Breach messages end with `(last probe OK)` or `(last probe failed)`; follow-up from [docs/case-studies.md](docs/case-studies.md#what-to-change). Branch `feat/alert-last-probe` |
+| Recovery reports the outage, not the window | ✅ | Uptime recovery messages (console, ntfy, log) add `last failure 21:04:53 UTC` next to the breach duration; follow-up from [docs/case-studies.md](docs/case-studies.md#what-to-change). Branch `feat/recovery-last-failure` |
 | Test full pipeline with a deliberate false breach | ✅ | `test/pipeline_test.dart` (probe to ntfy, faked network) and `dart run bin/drill.dart`. Drill run 2026-09-30 against a local fake endpoint: 1 alert when it broke, silence while it stayed down, 1 recovery after 7s. Console only; the live ntfy push still needs a run with `NTFY_TOPIC` set: [#25](https://github.com/cr2551/api-dashboard/issues/25) |
 
 ## Phase 6: Expand coverage
@@ -70,7 +72,9 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 | Task | Status | Issue |
 |---|---|---|
 | Add second and third API | ✅ | Generic `HttpProbe` (`type: "http"`) with GitHub, Frankfurter and httpbin in the example config: [#27](https://github.com/cr2551/api-dashboard/issues/27) |
+| Provider-reported status (status pages) | ✅ | New `statuspage` probe type reads a provider's public `/api/v2/status.json` (no key) and fails as `reported` ("Provider incident" chip) while an incident is declared; Square's status page is in the example config. Branch `feat/statuspage-probe` |
 | Make thresholds configurable per service | ✅ | p95, uptime, window, min samples and debounce per service: [#29](https://github.com/cr2551/api-dashboard/issues/29) |
+| Judge p95 only with enough samples | ✅ | `minLatencySamples` (off by default, 20 in the example config): one slow probe no longer opens a latency breach on a fresh window, as in the case-study re-run; follow-up from [docs/case-studies.md](docs/case-studies.md#what-to-change). Branch `feat/p95-min-samples` |
 | Config file (YAML/JSON) for services | ✅ | Schema, validating loader, `services.example.json` ([#26](https://github.com/cr2551/api-dashboard/issues/26)); `serve.dart` and `monitor.dart` run one monitor per service ([#28](https://github.com/cr2551/api-dashboard/issues/28)) |
 
 ## Phase 7: Flutter dashboard
@@ -81,6 +85,7 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 | Uptime % and latency trend chart | ✅ | [#15](https://github.com/cr2551/api-dashboard/issues/15) |
 | Connect Flutter app to backend API | ✅ | [#11](https://github.com/cr2551/api-dashboard/issues/11), [#12](https://github.com/cr2551/api-dashboard/issues/12), [#13](https://github.com/cr2551/api-dashboard/issues/13) |
 | Basic auth if backend is exposed publicly | ✅ | Backend bearer token (`API_TOKEN`): [#30](https://github.com/cr2551/api-dashboard/issues/30). App sends it, with a token prompt on 401: [#31](https://github.com/cr2551/api-dashboard/issues/31) |
+| Degraded state on the card | ✅ | `degraded` in `/api/status` when the last probe is OK but a breach is open, shown as an amber "Degraded" chip instead of "Operational" next to the breach banner; follow-up from [docs/case-studies.md](docs/case-studies.md#what-to-change). Branch `feat/degraded-state` |
 | Deploy backend somewhere persistent | ✅ | Docker Compose + Caddy (automatic HTTPS), `API_TOKEN` required (the server refuses to listen on the network without it), SQLite in a Docker volume, `restart: always` with Docker enabled at boot; steps in [deploy/README.md](deploy/README.md): [#32](https://github.com/cr2551/api-dashboard/issues/32), [PR #55](https://github.com/cr2551/api-dashboard/pull/55) |
 
 ## Phase 8: Documentation
@@ -96,7 +101,7 @@ Each open task is a GitHub issue in the [Project board](https://github.com/users
 
 | Component | Issues |
 |---|---|
-| backend | Threshold follow-ups from [docs/case-studies.md](docs/case-studies.md#what-to-change): one failed probe always opens a ~1 hour uptime breach under the example thresholds, alerts do not say whether the service is already back, and p95 is judged on the single slowest probe until 20 samples. No issue yet. |
+| backend | Threshold follow-ups from [docs/case-studies.md](docs/case-studies.md#what-to-change): one failed probe always opens a ~1 hour uptime breach under the example thresholds. No issue yet. |
 | backend | Follow-up to [#25](https://github.com/cr2551/api-dashboard/issues/25): one live ntfy push. Run `dart run bin/drill.dart` with `NTFY_TOPIC` set and confirm the alert and the recovery arrive on a phone, then put the same topic in `deploy/.env` so the deployed monitor alerts too. |
 | frontend | [#2](https://github.com/cr2551/api-dashboard/issues/2) leftover: branch `feat/dashboard-gui` has two unmerged commits (an actionable "cannot reach the backend" error in `lib/data/api_client.dart`, and step-by-step run instructions in the README). It is far behind `main`, so redo or rebase them, then close #2. |
 

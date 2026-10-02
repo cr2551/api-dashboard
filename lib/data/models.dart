@@ -1,6 +1,7 @@
 import 'failure_kind.dart';
 
-enum ServiceState { up, down, unknown }
+/// `degraded`: the last probe succeeded, but the SLA window is still breached.
+enum ServiceState { up, degraded, down, unknown }
 
 class ProbePoint {
   const ProbePoint({
